@@ -11,9 +11,9 @@
 #' @format NULL
 #' @usage NULL
 #' @export
-predicted_samples = function(model, newdata, var = "pred", ..., n = NULL) {
+predicted_samples = function(model, newdata, ..., n = NULL) {
   .Deprecated("predicted_draws", package = "tidybayes") # nocov
-  predicted_samples_(model, newdata, prediction = var, ..., n = n) # nocov
+  predicted_samples_(model, newdata, ..., n = n) # nocov
 }
 predicted_samples_ = function(model, newdata, var = "pred", ..., n = NULL) {
   combine_chains_for_deprecated_(predicted_draws( # nocov
@@ -117,35 +117,38 @@ add_predicted_samples = function(newdata, model, ..., n = NULL) {
 #'
 #' library(ggplot2)
 #' library(dplyr)
-#' library(rstanarm)
-#' library(modelr)
 #'
-#' theme_set(theme_light())
+#' if (
+#'   require("rstanarm", quietly = TRUE) &&
+#'   require("modelr", quietly = TRUE)
+#' ) {
 #'
-#' m_mpg = stan_glm(mpg ~ hp * cyl, data = mtcars,
-#'   # 1 chain / few iterations just so example runs quickly
-#'   # do not use in practice
-#'   chains = 1, iter = 500)
+#'   theme_set(theme_light())
 #'
-#' # draw 100 fit lines from the posterior and overplot them
-#' mtcars %>%
-#'   group_by(cyl) %>%
-#'   data_grid(hp = seq_range(hp, n = 101)) %>%
-#'   add_fitted_draws(m_mpg, n = 100) %>%
-#'   ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-#'   geom_line(aes(y = .value, group = paste(cyl, .draw)), alpha = 0.25) +
-#'   geom_point(data = mtcars)
+#'   m_mpg = stan_glm(mpg ~ hp * cyl, data = mtcars,
+#'     # 1 chain / few iterations just so example runs quickly
+#'     # do not use in practice
+#'     chains = 1, iter = 500)
 #'
-#' # plot posterior predictive intervals
-#' mtcars %>%
-#'   group_by(cyl) %>%
-#'   data_grid(hp = seq_range(hp, n = 101)) %>%
-#'   add_predicted_draws(m_mpg) %>%
-#'   ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-#'   stat_lineribbon(aes(y = .prediction), .width = c(.99, .95, .8, .5), alpha = 0.25) +
-#'   geom_point(data = mtcars) +
-#'   scale_fill_brewer(palette = "Greys")
+#'   # draw 100 fit lines from the posterior and overplot them
+#'   mtcars %>%
+#'     group_by(cyl) %>%
+#'     data_grid(hp = seq_range(hp, n = 101)) %>%
+#'     add_fitted_draws(m_mpg, n = 100) %>%
+#'     ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
+#'     geom_line(aes(y = .value, group = paste(cyl, .draw)), alpha = 0.25) +
+#'     geom_point(data = mtcars)
 #'
+#'   # plot posterior predictive intervals
+#'   mtcars %>%
+#'     group_by(cyl) %>%
+#'     data_grid(hp = seq_range(hp, n = 101)) %>%
+#'     add_predicted_draws(m_mpg) %>%
+#'     ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
+#'     stat_lineribbon(aes(y = .prediction), .width = c(.99, .95, .8, .5), alpha = 0.25) +
+#'     geom_point(data = mtcars) +
+#'     scale_fill_brewer(palette = "Greys")
+#' }
 #' }
 #' @importFrom magrittr %>%
 #' @importFrom tidyr gather
@@ -225,7 +228,7 @@ fitted_predicted_draws_brmsfit_ = function(f_fitted_predicted, model, newdata, o
   if (ndim(fits_preds) == 3) {
     #3 dimensions implies a categorical outcome, add a column for it
     # N.B.: at some point getting category names to work would be nice, but may be kind of brittle
-    column_format[[3]] = NA
+    column_format[[3]] = TRUE
     names(column_format)[[3]] = category
     groups %<>% union(category)
   }
@@ -244,18 +247,24 @@ fitted_predicted_draws_brmsfit_ = function(f_fitted_predicted, model, newdata, o
   }
   fits_preds_df$.draw = as.integer(fits_preds_df$.draw)
 
-  if (ndim(fits_preds) == 3) {
-    #3 dimensions implies a categorical outcome -> make category column be factor
-    fits_preds_df[[category]] = factor(fits_preds_df[[category]])
+  #for predictions from categorical models in brms, we can use the "levels" attribute
+  #to recover the original factor levels
+  prediction_levels = attr(fits_preds, "levels", exact = TRUE)
+  if (!is.null(prediction_levels)) {
+    fits_preds_df[[output_name]] = factor(
+      fits_preds_df[[output_name]],
+      levels = seq_along(prediction_levels),
+      labels = prediction_levels
+    )
   }
 
   newdata %>%
     mutate(
       .row = seq_len(n()),
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA)
+      .chain = NA_integer_,
+      .iteration = NA_integer_
     ) %>%
     inner_join(fits_preds_df, by = ".row") %>%
     select(-!!sym(output_name), !!sym(output_name)) %>%
-    group_by(!!!syms(groups))
+    group_by_at(groups)
 }

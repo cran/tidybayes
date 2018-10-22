@@ -4,14 +4,11 @@
 ###############################################################################
 
 suppressWarnings(suppressMessages({
-  library(bindrcpp)
   library(dplyr)
   library(tidyr)
-  library(rstan)
-  library(brms)
   library(arrayhelpers)
+  library(magrittr)
 }))
-import::from(magrittr, set_rownames)
 
 context("fitted_draws")
 
@@ -33,13 +30,14 @@ test_that("[add_]fitted_draws throws an error on unsupported models", {
 
 
 test_that("[add_]fitted_draws works on a simple rstanarm model", {
+  skip_if_not_installed("rstanarm")
   m_hp_wt = readRDS("../models/models.rstanarm.m_hp_wt.rds")
 
-  fits = posterior_linpred(m_hp_wt, newdata = mtcars_tbl) %>%
+  fits = rstanarm::posterior_linpred(m_hp_wt, newdata = mtcars_tbl) %>%
     as.data.frame() %>%
     mutate(
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA),
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
       .draw = seq_len(n())
     ) %>%
     gather(.row, .value, -.chain, -.iteration, -.draw) %>%
@@ -65,13 +63,14 @@ test_that("[add_]fitted_draws works on a simple rstanarm model", {
 })
 
 test_that("[add_]fitted_draws works on an rstanarm model with grouped newdata", {
+  skip_if_not_installed("rstanarm")
   m_hp_wt = readRDS("../models/models.rstanarm.m_hp_wt.rds")
 
-  fits = posterior_linpred(m_hp_wt, newdata = mtcars_tbl) %>%
+  fits = rstanarm::posterior_linpred(m_hp_wt, newdata = mtcars_tbl) %>%
     as.data.frame() %>%
     mutate(
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA),
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
       .draw = seq_len(n())
     ) %>%
     gather(.row, .value, -.chain, -.iteration, -.draw) %>%
@@ -88,14 +87,15 @@ test_that("[add_]fitted_draws works on an rstanarm model with grouped newdata", 
 
 
 test_that("[add_]fitted_draws works on brms models without dpar", {
+  skip_if_not_installed("brms")
   m_hp = readRDS("../models/models.brms.m_hp.rds")
 
   fits = fitted(m_hp, mtcars_tbl, summary = FALSE) %>%
     as.data.frame() %>%
     set_names(seq_len(ncol(.))) %>%
     mutate(
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA),
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
       .draw = seq_len(n())
     ) %>%
     gather(.row, .value, -.chain, -.iteration, -.draw) %>%
@@ -122,14 +122,15 @@ test_that("[add_]fitted_draws works on brms models without dpar", {
 
 
 test_that("[add_]fitted_draws works on brms models with dpar", {
+  skip_if_not_installed("brms")
   m_hp_sigma = readRDS("../models/models.brms.m_hp_sigma.rds")
 
   fits = fitted(m_hp_sigma, mtcars_tbl, summary = FALSE) %>%
     as.data.frame() %>%
     set_names(seq_len(ncol(.))) %>%
     mutate(
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA),
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
       .draw = seq_len(n())
     ) %>%
     gather(.row, .value, -.chain, -.iteration, -.draw) %>%
@@ -170,6 +171,7 @@ test_that("[add_]fitted_draws works on brms models with dpar", {
 
 
 test_that("[add_]fitted_draws works on simple brms models with nlpars", {
+  skip_if_not_installed("brms")
   m_nlpar = readRDS("../models/models.brms.m_nlpar.rds")
   df_nlpar = as_data_frame(m_nlpar$data)
 
@@ -177,8 +179,8 @@ test_that("[add_]fitted_draws works on simple brms models with nlpars", {
     as.data.frame() %>%
     set_names(seq_len(ncol(.))) %>%
     mutate(
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA),
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
       .draw = seq_len(n())
     ) %>%
     gather(.row, .value, -.chain, -.iteration, -.draw) %>%
@@ -196,6 +198,7 @@ test_that("[add_]fitted_draws works on simple brms models with nlpars", {
 
 
 test_that("[add_]fitted_draws works on simple brms models with multiple dpars", {
+  skip_if_not_installed("brms")
   m_dpars = readRDS("../models/models.brms.m_dpars.rds")
   df_dpars = as_data_frame(m_dpars$data)
 
@@ -203,8 +206,8 @@ test_that("[add_]fitted_draws works on simple brms models with multiple dpars", 
     as.data.frame() %>%
     set_names(seq_len(ncol(.))) %>%
     mutate(
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA),
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
       .draw = seq_len(n())
     ) %>%
     gather(.row, .value, -.chain, -.iteration, -.draw) %>%
@@ -232,16 +235,16 @@ test_that("[add_]fitted_draws works on simple brms models with multiple dpars", 
 
 
 test_that("[add_]fitted_draws works on brms models with categorical outcomes (response scale)", {
+  skip_if_not_installed("brms")
   m_cyl_mpg = readRDS("../models/models.brms.m_cyl_mpg.rds")
 
   fits = fitted(m_cyl_mpg, mtcars_tbl, summary = FALSE) %>%
-    array2df(list(.draw = NA, .row = NA, .category = NA), label.x = ".value") %>%
+    array2df(list(.draw = NA, .row = NA, .category = TRUE), label.x = ".value") %>%
     mutate(
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA),
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
       .row = as.integer(.row),
-      .draw = as.integer(.draw),
-      .category = factor(.category)
+      .draw = as.integer(.draw)
     )
 
   ref = inner_join(mtcars_tbl %>% mutate(.row = as.integer(rownames(.))), fits, by = ".row")
@@ -262,16 +265,16 @@ test_that("[add_]fitted_draws works on brms models with categorical outcomes (re
 
 
 test_that("[add_]fitted_draws works on brms models with categorical outcomes (linear scale)", {
+  skip_if_not_installed("brms")
   m_cyl_mpg = readRDS("../models/models.brms.m_cyl_mpg.rds")
 
   fits = fitted(m_cyl_mpg, mtcars_tbl, summary = FALSE, scale = "linear") %>%
-    array2df(list(.draw = NA, .row = NA, .category = NA), label.x = ".value") %>%
+    array2df(list(.draw = NA, .row = NA, .category = TRUE), label.x = ".value") %>%
     mutate(
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA),
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
       .row = as.integer(.row),
-      .draw = as.integer(.draw),
-      .category = factor(.category)
+      .draw = as.integer(.draw)
     )
 
   ref = inner_join(mtcars_tbl %>% mutate(.row = as.integer(rownames(.))), fits, by = ".row")
@@ -282,10 +285,11 @@ test_that("[add_]fitted_draws works on brms models with categorical outcomes (li
 
 
 test_that("[add_]fitted_draws allows extraction of dpar on brms models with categorical outcomes (linear scale)", {
+  skip_if_not_installed("brms")
   m_cyl_mpg = readRDS("../models/models.brms.m_cyl_mpg.rds")
 
   fits = fitted(m_cyl_mpg, mtcars_tbl, summary = FALSE, scale = "linear") %>%
-    array2df(list(.draw = NA, .row = NA, .category = NA), label.x = ".value")
+    array2df(list(.draw = NA, .row = NA, .category = TRUE), label.x = ".value")
 
   mu_fits = fitted(m_cyl_mpg, mtcars_tbl, summary = FALSE, scale = "linear", dpar = "mu") %>%
     array2df(list(.draw = NA, .row = NA), label.x = "mu")
@@ -294,8 +298,8 @@ test_that("[add_]fitted_draws allows extraction of dpar on brms models with cate
     inner_join(fits, by = ".row") %>%
     left_join(mu_fits, by = c(".row", ".draw")) %>%
     mutate(
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA),
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
       .row = as.integer(.row),
       .draw = as.integer(.draw),
       .category = factor(.category)
@@ -307,10 +311,11 @@ test_that("[add_]fitted_draws allows extraction of dpar on brms models with cate
 
 
 test_that("[add_]fitted_draws allows extraction of dpar on brms models with categorical outcomes (response scale)", {
+  skip_if_not_installed("brms")
   m_cyl_mpg = readRDS("../models/models.brms.m_cyl_mpg.rds")
 
   fits = fitted(m_cyl_mpg, mtcars_tbl, summary = FALSE, scale = "response") %>%
-    array2df(list(.draw = NA, .row = NA, .category = NA), label.x = ".value")
+    array2df(list(.draw = NA, .row = NA, .category = TRUE), label.x = ".value")
 
   mu_fits = fitted(m_cyl_mpg, mtcars_tbl, summary = FALSE, scale = "response", dpar = "mu") %>%
     array2df(list(.draw = NA, .row = NA), label.x = "mu")
@@ -319,8 +324,8 @@ test_that("[add_]fitted_draws allows extraction of dpar on brms models with cate
     inner_join(fits, by = ".row") %>%
     left_join(mu_fits, by = c(".row", ".draw")) %>%
     mutate(
-      .chain = as.integer(NA),
-      .iteration = as.integer(NA),
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
       .row = as.integer(.row),
       .draw = as.integer(.draw),
       .category = factor(.category)
@@ -332,6 +337,7 @@ test_that("[add_]fitted_draws allows extraction of dpar on brms models with cate
 
 
 test_that("[add_]fitted_draws throws an error when nsamples is called instead of n in brms", {
+  skip_if_not_installed("brms")
   m_hp = readRDS("../models/models.brms.m_hp.rds")
 
   expect_error(
@@ -345,6 +351,7 @@ test_that("[add_]fitted_draws throws an error when nsamples is called instead of
 })
 
 test_that("[add_]predicted_draws throws an error when re.form is called instead of re_formula in rstanarm", {
+  skip_if_not_installed("rstanarm")
   m_hp_wt = readRDS("../models/models.rstanarm.m_hp_wt.rds")
 
   expect_error(
@@ -358,6 +365,7 @@ test_that("[add_]predicted_draws throws an error when re.form is called instead 
 })
 
 test_that("[add_]predicted_draws throws an error when transform is called instead of scale in rstanarm", {
+  skip_if_not_installed("rstanarm")
   m_hp_wt = readRDS("../models/models.rstanarm.m_hp_wt.rds")
 
   expect_error(

@@ -1,6 +1,13 @@
 params <-
 list(EVAL = TRUE)
 
+## ----chunk_options, include=FALSE----------------------------------------
+knitr::opts_chunk$set(
+  fig.width = 6, 
+  fig.height = 4,
+  eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
+)
+
 ## ----setup, message = FALSE, warning = FALSE-----------------------------
 library(magrittr)
 library(dplyr)
@@ -14,7 +21,11 @@ library(rstanarm)
 library(brms)
 library(modelr)
 library(bayesplot)
+library(MCMCglmm)
 library(tidybayes)
+library(cowplot)
+
+theme_set(theme_tidybayes() + panel_border() + background_grid())
 
 ## ---- eval=FALSE---------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
@@ -27,16 +38,6 @@ library(tidybayes)
 # the reader as a best pratice example)
 rstan_options(auto_write = TRUE)
 options(mc.cores = min(2, parallel::detectCores()))
-
-#ggplot options
-theme_set(theme_light())
-
-#default chunk options
-knitr::opts_chunk$set(
-  fig.width = 6, 
-  fig.height = 4,
-  eval = params$EVAL
-)
 
 options(width = 100)
 
@@ -394,6 +395,19 @@ m_rst %>%
 ## -------------------------------------------------------------------------------------------------
 m_rst %>%
   emmeans( ~ condition) %>%
+  contrast(method = "pairwise") %>%
+  gather_emmeans_draws() %>%
+  ggplot(aes(x = .value, y = contrast)) +
+  geom_halfeyeh()
+
+## -------------------------------------------------------------------------------------------------
+# MCMCglmm does not support tibbles directly,
+# so we convert ABC to a data.frame on the way in
+m_glmm = MCMCglmm(response ~ condition, data = as.data.frame(ABC))
+
+## -------------------------------------------------------------------------------------------------
+m_glmm %>%
+  emmeans( ~ condition, data = ABC) %>%
   contrast(method = "pairwise") %>%
   gather_emmeans_draws() %>%
   ggplot(aes(x = .value, y = contrast)) +

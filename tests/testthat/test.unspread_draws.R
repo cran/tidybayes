@@ -3,8 +3,7 @@
 # Author: mjskay
 ###############################################################################
 
-import::from(dplyr, `%>%`, inner_join, data_frame)
-import::from(purrr, map_df)
+library(dplyr)
 library(tidyr)
 
 context("unspread_draws")

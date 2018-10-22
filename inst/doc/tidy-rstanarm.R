@@ -1,6 +1,13 @@
 params <-
 list(EVAL = TRUE)
 
+## ----chunk_options, include=FALSE----------------------------------------
+knitr::opts_chunk$set(
+  fig.width = 6, 
+  fig.height = 4,
+  eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
+)
+
 ## ----setup, message = FALSE, warning = FALSE-----------------------------
 library(magrittr)
 library(dplyr)
@@ -14,7 +21,9 @@ library(ggstance)
 library(ggridges)
 library(rstan)
 library(rstanarm)
-import::from(LaplacesDemon, invlogit)
+library(cowplot)
+
+theme_set(theme_tidybayes() + panel_border() + background_grid())
 
 ## ---- eval=FALSE---------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
@@ -27,16 +36,6 @@ import::from(LaplacesDemon, invlogit)
 # the reader as a best pratice example)
 rstan_options(auto_write = TRUE)
 options(mc.cores = min(2, parallel::detectCores()))
-
-#ggplot options
-theme_set(theme_light())
-
-#default chunk options
-knitr::opts_chunk$set(
-  fig.width = 6, 
-  fig.height = 4,
-  eval = params$EVAL
-)
 
 options(width = 120)
 
@@ -299,7 +298,7 @@ esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_rs, scale = "linear") %>%
   ggplot(aes(x = as.numeric(agegp), y = .value)) +
-  stat_lineribbon(alpha = 0.5) +
+  stat_lineribbon() +
   scale_fill_brewer(palette = "Greys")
 
 ## ---------------------------------------------------------------------------------------------------------------------
@@ -325,12 +324,12 @@ esoph %>%
   inner_join(thresholds, by = ".draw") %>%
   mutate(`P(Y = category)` = map2(threshold, .value, function(alpha, beta_x)
       # this part is logit^-1(alpha_j - beta*x) - logit^-1(alpha_j-1 - beta*x)
-      invlogit(alpha - beta_x) - 
-      invlogit(lag(alpha, default = -Inf) - beta_x)
+      LaplacesDemon::invlogit(alpha - beta_x) - 
+      LaplacesDemon::invlogit(lag(alpha, default = -Inf) - beta_x)
     )) %>%
   mutate(.category = list(levels(esoph$tobgp))) %>%
   unnest() %>%
-  ggplot(aes(x = agegp, y = `P(Y = category)`, color = ordered(.category))) +
+  ggplot(aes(x = agegp, y = `P(Y = category)`, color = .category)) +
   stat_pointinterval(position = position_dodge(width = .4), show.legend = TRUE) +
   scale_size_continuous(guide = FALSE) +
   scale_fill_brewer(palette = "Greys") 
@@ -342,8 +341,8 @@ esoph %>%
   inner_join(thresholds, by = ".draw") %>%
   mutate(`P(Y = category)` = map2(threshold, .value, function(alpha, beta_x)
       # this part is logit^-1(alpha_j - beta*x) - logit^-1(alpha_j-1 - beta*x)
-      invlogit(alpha - beta_x) - 
-      invlogit(lag(alpha, default = -Inf) - beta_x)
+      LaplacesDemon::invlogit(alpha - beta_x) - 
+      LaplacesDemon::invlogit(lag(alpha, default = -Inf) - beta_x)
     )) %>%
   mutate(.category = list(levels(esoph$tobgp))) %>%
   unnest() %>%

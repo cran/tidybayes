@@ -1,6 +1,13 @@
 params <-
 list(EVAL = TRUE)
 
+## ----chunk_options, include=FALSE----------------------------------------
+knitr::opts_chunk$set(
+  fig.width = 6, 
+  fig.height = 4,
+  eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
+)
+
 ## ----setup, message = FALSE, warning = FALSE-----------------------------
 library(magrittr)
 library(dplyr)
@@ -14,6 +21,9 @@ library(ggridges)
 library(cowplot)
 library(rstan)
 library(brms)
+library(ggrepel)
+
+theme_set(theme_tidybayes() + panel_border() + background_grid())
 
 ## ---- eval=FALSE---------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
@@ -26,16 +36,6 @@ library(brms)
 # the reader as a best pratice example)
 rstan_options(auto_write = TRUE)
 options(mc.cores = min(2, parallel::detectCores()))
-
-#ggplot options
-theme_set(theme_light())
-
-#default chunk options
-knitr::opts_chunk$set(
-  fig.width = 6, 
-  fig.height = 4,
-  eval = params$EVAL
-)
 
 options(width = 120)
 
@@ -325,28 +325,32 @@ m %>%
   geom_vline(xintercept = 0, linetype = "dashed") 
 
 ## ---------------------------------------------------------------------------------------------------------------------
-m_cyl = brm(ordered(cyl) ~ mpg, data = mtcars, family = cumulative)
+mtcars_clean = mtcars %>%
+  mutate(cyl = ordered(cyl))
+
+head(mtcars_clean)
+
+## ---------------------------------------------------------------------------------------------------------------------
+m_cyl = brm(cyl ~ mpg, data = mtcars_clean, family = cumulative, seed = 58393)
 
 ## ---------------------------------------------------------------------------------------------------------------------
 data_frame(mpg = 21) %>%
   add_fitted_draws(m_cyl) %>%
   median_qi(.value)
 
-## ---------------------------------------------------------------------------------------------------------------------
-data_plot = mtcars %>%
-  ggplot(aes(x = mpg, y = cyl, color = ordered(cyl))) +
+## ---- fig.width = 6, fig.height = 4-----------------------------------------------------------------------------------
+data_plot = mtcars_clean %>%
+  ggplot(aes(x = mpg, y = cyl, color = cyl)) +
   geom_point() +
   scale_color_brewer(palette = "Dark2", name = "cyl")
 
-fit_plot = mtcars %>%
+fit_plot = mtcars_clean %>%
   data_grid(mpg = seq_range(mpg, n = 101)) %>%
   # we can use the `value` argument to give the column with values of 
-  # transformed linear predictors a more precise name
-  add_fitted_draws(m_cyl, value = "P(cyl | mpg)") %>%
-  # brms does not keep the category labels,
-  # but we can recover them from the original data
-  ungroup() %>%
-  mutate(cyl = ordered(.category, labels = levels(ordered(mtcars$cyl)))) %>%
+  # transformed linear predictors a more precise name and the 
+  # `category` argument to give the column with category labels
+  # a more precise name
+  add_fitted_draws(m_cyl, value = "P(cyl | mpg)", category = "cyl") %>%
   ggplot(aes(x = mpg, y = `P(cyl | mpg)`, color = cyl)) +
   stat_lineribbon(aes(fill = cyl), alpha = 1/5) +
   scale_color_brewer(palette = "Dark2") +
@@ -363,17 +367,17 @@ label_data_function = . %>%
   filter(mpg == quantile(mpg, .47)) %>%
   summarise_if(is.numeric, mean)
 
-data_plot_with_mean = mtcars %>%
+data_plot_with_mean = mtcars_clean %>%
   data_grid(mpg = seq_range(mpg, n = 101)) %>%
   add_fitted_draws(m_cyl, value = "P(cyl | mpg)", n = 100) %>%
-  # turn the .category (a factor) into a cylinder value in {4, 6, 8}
-  mutate(cyl = as.numeric(levels(ordered(mtcars$cyl)))[.category]) %>%
+  # turn `.category` (a factor) into a numeric value in {4, 6, 8}
+  mutate(cyl = as.numeric(as.character(.category))) %>%
   group_by(mpg, .draw) %>%
   # calculate expected cylinder value
   summarise(cyl = sum(cyl * `P(cyl | mpg)`)) %>%
   ggplot(aes(x = mpg, y = cyl)) +
   geom_line(aes(group = .draw), alpha = 5/100) +
-  geom_point(aes(fill = ordered(cyl)), data = mtcars, shape = 21, size = 2) +
+  geom_point(aes(y = as.numeric(as.character(cyl)), fill = cyl), data = mtcars_clean, shape = 21, size = 2) +
   geom_text(aes(x = mpg + 4), label = "E[cyl | mpg]", data = label_data_function, hjust = 0) +
   geom_segment(aes(yend = cyl, xend = mpg + 3.9), data = label_data_function) +
   scale_fill_brewer(palette = "Dark2", name = "cyl")
@@ -383,6 +387,54 @@ plot_grid(ncol = 1, align = "v",
   fit_plot
 )
 
+## ---- fig.width = 6, fig.height = 4-----------------------------------------------------------------------------------
+mtcars_clean %>%
+  # we use `select` instead of `data_grid` here because we want to make posterior predictions
+  # for exactly the same set of observations we have in the original data
+  select(mpg) %>%
+  add_predicted_draws(m_cyl, prediction = "cyl", seed = 1234) %>%
+  ggplot(aes(x = mpg, y = cyl)) +
+  geom_count(color = "gray75") +
+  geom_point(aes(fill = cyl), data = mtcars_clean, shape = 21, size = 2) +
+  scale_fill_brewer(palette = "Dark2") +
+  geom_label_repel(
+    data = . %>% ungroup() %>% filter(cyl == "8") %>% filter(mpg == max(mpg)) %>% dplyr::slice(1),
+    label = "posterior predictions", xlim = c(26, NA), ylim = c(NA, 2.8), point.padding = 0.3,
+    label.size = NA, color = "gray50", segment.color = "gray75"
+  ) +
+  geom_label_repel(
+    data = mtcars_clean %>% filter(cyl == "6") %>% filter(mpg == max(mpg)) %>% dplyr::slice(1),
+    label = "observed data", xlim = c(26, NA), ylim = c(2.2, NA), point.padding = 0.2,
+    label.size = NA, segment.color = "gray35"
+  )
+
+## ---- fig.width = 6.5, fig.height = 4---------------------------------------------------------------------------------
+mtcars_clean %>%
+  select(mpg) %>%
+  add_predicted_draws(m_cyl, prediction = "cyl", n = 100, seed = 12345) %>%
+  ggplot(aes(x = cyl)) +
+  stat_count(aes(group = NA), geom = "line", data = mtcars_clean, color = "red", size = 3, alpha = .5) +
+  stat_count(aes(group = .draw), geom = "line", position = "identity", alpha = .05) +
+  geom_label(data = data.frame(cyl = "4"), y = 9.5, label = "posterior\npredictions",
+    hjust = 1, color = "gray50", lineheight = 1, label.size = NA) +
+  geom_label(data = data.frame(cyl = "8"), y = 14, label = "observed data",
+    hjust = 0, color = "red", label.size = NA)
+
+## ---------------------------------------------------------------------------------------------------------------------
+mtcars_clean %>%
+  select(mpg) %>%
+  add_predicted_draws(m_cyl, prediction = "cyl") %>%
+  group_by(.draw) %>%
+  count(cyl) %>%
+  complete(cyl, fill = list(n = 0)) %>%
+  gather_pairs(cyl, n) %>%
+  ggplot(aes(.x, .y)) +
+  geom_count(color = "gray75") +
+  geom_point(data = mtcars_clean %>% count(cyl) %>% gather_pairs(cyl, n), color = "red") +
+  facet_grid(vars(.row), vars(.col)) +
+  xlab("Number of observations with cyl = col") +
+  ylab("Number of observations with cyl = row") 
+
 ## ---------------------------------------------------------------------------------------------------------------------
 data(esoph)
 m_esoph_brm = brm(tobgp ~ agegp, data = esoph, family = cumulative())
@@ -391,10 +443,7 @@ m_esoph_brm = brm(tobgp ~ agegp, data = esoph, family = cumulative())
 esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_brm, dpar = TRUE) %>%
-  # brms does not keep the category labels,
-  # but we can recover them from the original data
-  within(levels(.category) <- levels(esoph$tobgp)) %>%
-  ggplot(aes(x = agegp, y = .value, color = ordered(.category))) +
+  ggplot(aes(x = agegp, y = .value, color = .category)) +
   stat_pointinterval(position = position_dodge(width = .4), .width = c(.66, .95), show.legend = TRUE) +
   scale_size_continuous(guide = FALSE)
 
@@ -402,7 +451,6 @@ esoph %>%
 esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_brm) %>%
-  within(levels(.category) <- levels(esoph$tobgp)) %>%
   ggplot(aes(x = .value, y = .category)) +
   stat_summaryh(fun.x = median, geom = "barh", fill = "gray75", width = 1, color = "white") +
   stat_pointintervalh() +
