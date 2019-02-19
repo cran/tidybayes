@@ -24,6 +24,8 @@ library(bayesplot)
 library(MCMCglmm)
 library(tidybayes)
 library(cowplot)
+library(RColorBrewer)
+library(gganimate)
 
 theme_set(theme_tidybayes() + panel_border() + background_grid())
 
@@ -46,7 +48,7 @@ set.seed(5)
 n = 10
 n_condition = 5
 ABC =
-  data_frame(
+  tibble(
     condition = rep(c("A","B","C","D","E"), n),
     response = rnorm(n * 5, c(0,1,2,1,-1), 0.5)
   )
@@ -181,7 +183,7 @@ m %>%
 ## -------------------------------------------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
-  do(data_frame(condition_mean = quantile(.$condition_mean, ppoints(100)))) %>%
+  do(tibble(condition_mean = quantile(.$condition_mean, ppoints(100)))) %>%
   ggplot(aes(x = condition_mean)) +
   geom_dotplot(binwidth = .04) +
   facet_grid(fct_rev(condition) ~ .) +
@@ -189,7 +191,7 @@ m %>%
 
 ## -------------------------------------------------------------------------------------------------
 set.seed(123)
-multimodal_draws = data_frame(
+multimodal_draws = tibble(
   x = c(rnorm(5000, 0, 1), rnorm(2500, 4, 1))
 )
 
@@ -315,6 +317,23 @@ mtcars %>%
   scale_color_brewer(palette = "Dark2")
 
 ## -------------------------------------------------------------------------------------------------
+set.seed(123456)
+ndraws = 50
+
+p = mtcars %>%
+  group_by(cyl) %>%
+  data_grid(hp = seq_range(hp, n = 101)) %>%
+  add_fitted_draws(m_mpg, n = ndraws) %>%
+  ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
+  geom_line(aes(y = .value, group = paste(cyl, .draw))) +
+  geom_point(data = mtcars) +
+  scale_color_brewer(palette = "Dark2") +
+  transition_states(.draw, 0, 1) +
+  shadow_mark(future = TRUE, color = "gray50", alpha = 1/20)
+
+animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 384, res = 96, type = "cairo")
+
+## -------------------------------------------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
@@ -401,15 +420,8 @@ m_rst %>%
   geom_halfeyeh()
 
 ## -------------------------------------------------------------------------------------------------
-# MCMCglmm does not support tibbles directly,
-# so we convert ABC to a data.frame on the way in
-m_glmm = MCMCglmm(response ~ condition, data = as.data.frame(ABC))
-
-## -------------------------------------------------------------------------------------------------
-m_glmm %>%
-  emmeans( ~ condition, data = ABC) %>%
-  contrast(method = "pairwise") %>%
+m_rst %>%
+  emmeans(pairwise ~ condition) %>%
   gather_emmeans_draws() %>%
-  ggplot(aes(x = .value, y = contrast)) +
-  geom_halfeyeh()
+  median_qi()
 

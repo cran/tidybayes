@@ -22,6 +22,8 @@ library(ggridges)
 library(rstan)
 library(rstanarm)
 library(cowplot)
+library(RColorBrewer)
+library(gganimate)
 
 theme_set(theme_tidybayes() + panel_border() + background_grid())
 
@@ -44,7 +46,7 @@ set.seed(5)
 n = 10
 n_condition = 5
 ABC =
-  data_frame(
+  tibble(
     condition = rep(c("A","B","C","D","E"), n),
     response = rnorm(n * 5, c(0,1,2,1,-1), 0.5)
   )
@@ -185,7 +187,7 @@ ABC %>%
 ABC %>%
   data_grid(condition) %>%
   add_fitted_draws(m) %>%
-  do(data_frame(.value = quantile(.$.value, ppoints(100)))) %>%
+  do(tibble(.value = quantile(.$.value, ppoints(100)))) %>%
   ggplot(aes(x = .value)) +
   geom_dotplot(binwidth = .04) +
   facet_grid(fct_rev(condition) ~ .) +
@@ -249,6 +251,23 @@ mtcars %>%
   scale_color_brewer(palette = "Dark2")
 
 ## ---------------------------------------------------------------------------------------------------------------------
+set.seed(123456)
+ndraws = 50
+
+p = mtcars %>%
+  group_by(cyl) %>%
+  data_grid(hp = seq_range(hp, n = 101)) %>%
+  add_fitted_draws(m_mpg, n = ndraws) %>%
+  ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
+  geom_line(aes(y = .value, group = paste(cyl, .draw))) +
+  geom_point(data = mtcars) +
+  scale_color_brewer(palette = "Dark2") +
+  transition_states(.draw, 0, 1) +
+  shadow_mark(future = TRUE, color = "gray50", alpha = 1/20)
+
+animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 384, res = 96, type = "cairo")
+
+## ---------------------------------------------------------------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
@@ -265,10 +284,10 @@ mtcars %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
   add_predicted_draws(m_mpg) %>%
   ggplot(aes(x = hp, y = mpg)) +
-  stat_lineribbon(aes(y = .prediction), .width = c(.99, .95, .8, .5)) +
+  stat_lineribbon(aes(y = .prediction), .width = c(.99, .95, .8, .5), color = brewer.pal(5, "Blues")[[5]]) +
   geom_point(data = mtcars) +
   scale_fill_brewer() +
-  facet_grid(. ~ cyl)
+  facet_grid(. ~ cyl, space = "free_x", scales = "free_x")
 
 ## ---- fig.width=7-----------------------------------------------------------------------------------------------------
 #N.B. the syntax for compare_levels is experimental and may change
@@ -298,7 +317,7 @@ esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_rs, scale = "linear") %>%
   ggplot(aes(x = as.numeric(agegp), y = .value)) +
-  stat_lineribbon() +
+  stat_lineribbon(color = "red") +
   scale_fill_brewer(palette = "Greys")
 
 ## ---------------------------------------------------------------------------------------------------------------------
@@ -330,9 +349,9 @@ esoph %>%
   mutate(.category = list(levels(esoph$tobgp))) %>%
   unnest() %>%
   ggplot(aes(x = agegp, y = `P(Y = category)`, color = .category)) +
-  stat_pointinterval(position = position_dodge(width = .4), show.legend = TRUE) +
+  stat_pointinterval(position = position_dodge(width = .4)) +
   scale_size_continuous(guide = FALSE) +
-  scale_fill_brewer(palette = "Greys") 
+  scale_color_manual(values = brewer.pal(6, "Blues")[-c(1,2)]) 
 
 ## ----fig.height = 2.25, fig.width = 8---------------------------------------------------------------------------------
 esoph %>%

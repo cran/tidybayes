@@ -64,10 +64,8 @@ as_sample_data_frame = function(...) {
 #'
 #' @importFrom purrr map_dfr
 #' @importFrom dplyr bind_cols
-#' @importFrom tibble as_tibble tibble
+#' @importFrom dplyr as_tibble tibble
 #' @importFrom coda as.mcmc.list as.mcmc
-#' @importFrom stats coef vcov
-#' @importFrom MASS mvrnorm
 #' @export
 tidy_draws = function(model) UseMethod("tidy_draws")
 
@@ -109,7 +107,7 @@ tidy_draws.stanfit = function(model) {
 
   parameter_draws = tidy_draws(rstan::As.mcmc.list(model))
 
-  diagnostics_draws = map_dfr(rstan::get_sampler_params(model, inc_warmup = FALSE), as_tibble)
+  diagnostics_draws = map_dfr(rstan::get_sampler_params(model, inc_warmup = FALSE), as.data.frame)
 
   bind_cols(parameter_draws, diagnostics_draws)
 }

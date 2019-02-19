@@ -44,11 +44,18 @@ gather_emmeans_samples = function(...) {
 #' @param object An \code{emmGrid} object such as returned by
 #' \code{\link[emmeans]{ref_grid}} or \code{\link[emmeans]{emmeans}}.
 #' @param value The name of the output column to use to contain the values of draws. Defaults to \code{".value"}.
+#' @param grid If \code{object} is an \code{\link[emmeans]{emm_list}}, the name of the output column to use to contain the name of the
+#' reference grid that a given row corresponds to. Defaults to \code{".grid"}.
+#' @param ... Additional arguments passed to the underlying method for the type of object given.
 #'
 #' @return A tidy data frame of draws. The columns of the reference grid are returned as-is, with an
 #' additional column called \code{.value} (by default) containing marginal draws. The resulting data
 #' frame is grouped by the columns from the reference grid to make use of summary functions like
 #' \code{\link{point_interval}} straightforward.
+#'
+#' If \code{object} is an \code{\link[emmeans]{emm_list}}, which contains estimates from different reference grids,
+#' an additional column with the default name of \code{".grid"} is added to indicate the reference grid for each row in the output.
+#' The name of this column is controlled by the \code{grid} argument.
 #'
 #' @author Matthew Kay
 #' @seealso \code{\link[emmeans]{emmeans}}
@@ -68,7 +75,7 @@ gather_emmeans_samples = function(...) {
 #'   n = 10
 #'   n_condition = 5
 #'   ABC =
-#'     data_frame(
+#'     tibble(
 #'       condition = rep(c("A","B","C","D","E"), n),
 #'       response = rnorm(n * 5, c(0,1,2,1,-1), 0.5)
 #'     )
@@ -98,10 +105,14 @@ gather_emmeans_samples = function(...) {
 #' }
 #' @importFrom magrittr %>%
 #' @importFrom purrr map_dfr
-#' @importFrom tibble as_tibble
+#' @importFrom dplyr as_tibble
 #' @importFrom rlang syms
 #' @export
-gather_emmeans_draws = function(object, value = ".value") {
+gather_emmeans_draws = function(object, value = ".value", ...) UseMethod("gather_emmeans_draws")
+
+#' @rdname gather_emmeans_draws
+#' @export
+gather_emmeans_draws.default = function(object, value = ".value", ...) {
   grid = as_tibble(object@grid)
 
   # this matrix will have n_iterations rows and nrow(grid) columns,
@@ -127,4 +138,23 @@ gather_emmeans_draws = function(object, value = ".value") {
   draws[, setdiff(names(draws), c(".wgt.", ".offset."))] %>%
     as_tibble() %>%
     group_by_at(setdiff(names(.), c(".chain", ".iteration", ".draw", value)))
+}
+
+#' @rdname gather_emmeans_draws
+#' @export
+gather_emmeans_draws.emm_list = function(object, value = ".value", grid = ".grid", ...) {
+  list_of_draw_tibbles = map(object, gather_emmeans_draws, value = value, ...)
+  group_names = map(list_of_draw_tibbles, group_vars) %>%
+    reduce(union)
+
+  list_of_draw_tibbles %>%
+    # bind_rows on a tibble throws irrelevant (in this case) messages about
+    # implicit NAs in factors in the case where factor columns do not have values
+    # in all tibbles being merge, which may happen in the case where a `contrast`
+    # column is output from one emmeans grid but not another. So we'll avoid
+    # that by converting factor columns to characters first
+    map(ungroup) %>%
+    map(mutate_if, is.factor, as.character) %>%
+    bind_rows(.id = grid) %>%
+    group_by_at(c(group_names, grid))
 }

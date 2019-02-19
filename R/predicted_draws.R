@@ -35,11 +35,11 @@ add_predicted_samples = function(newdata, model, ..., n = NULL) {
 
 # [add_]predicted_draws ---------------------------------------------------
 
-#' Add draws from (possibly transformed) posterior linear predictors (the "fit") or from posterior predictions
-#' of a model to a data frame
+#' Add draws from the posterior fit, predictions, or residuals of a model to a data frame
 #'
-#' Given a data frame and a model, adds draws from the posterior "fit" (aka the linear/link-level predictor)
-#' or from the posterior predictions of the model to the data frame in a long format.
+#' Given a data frame and a model, adds draws from the (possibly transformed) posterior "fit" (aka the
+#' linear/link-level predictor), the posterior predictions of the model, or the residuals of a model to
+#' the data frame in a long format.
 #'
 #' \code{add_fitted_draws} adds draws from (possibly transformed) posterior linear predictors (or "link-level" predictors) to
 #' the data. It corresponds to \code{\link[rstanarm]{posterior_linpred}} in \code{rstanarm} or
@@ -72,6 +72,7 @@ add_predicted_samples = function(newdata, model, ..., n = NULL) {
 #' and \code{brm}, are supported here).
 #' @param value The name of the output column for \code{fitted_draws}; default \code{".value"}.
 #' @param prediction The name of the output column for \code{predicted_draws}; default \code{".prediction"}.
+#' @param residual The name of the output column for \code{residual_draws}; default \code{".residual"}.
 #' @param ... Additional arguments passed to the underlying prediction method for the type of
 #' model given.
 #' @param n The number of draws per prediction / fit to return, or \code{NULL} to return all draws.
@@ -82,12 +83,16 @@ add_predicted_samples = function(newdata, model, ..., n = NULL) {
 #' marginalizing over grouping factors by specifying new levels of a factor in \code{newdata}. In the case of
 #' \code{\link[brms]{brm}}, you must also pass \code{allow_new_levels = TRUE} here to include new levels (see
 #' \code{\link[brms]{predict.brmsfit}}).
-#' @param category For \emph{some} ordinal and multinomial models (notably, \code{\link[brms]{brm}} models but
+#' @param category For \emph{some} ordinal, multinomial, and multivariate models (notably, \code{\link[brms]{brm}} models but
 #' \emph{not} \code{\link[rstanarm]{stan_polr}} models), multiple sets of rows will be returned per input row for
-#' \code{fitted_draws}, one for each category. The \code{category} argument specifies the name of the column
-#' to put the category names into in the resulting data frame (default: \code{".category"}). The fact that multiple
-#' rows per response are returned only for some model types reflects the fact that tidybayes takes the approach of
-#' tidying whatever output is given to us, and the output from different modeling functions differ on this point.
+#' \code{fitted_draws} or \code{predicted_draws}, depending on the model type. For ordinal/multinomial models,
+#' these rows correspond to different categories of the response variable. For multivariate models, these correspond to
+#' different response variables. The \code{category} argument specifies the name of the column
+#' to put the category names (or variable names) into in the resulting data frame. The default name of this column
+#' (\code{".category"}) reflects the fact that this functionality was originally used only for ordinal models and
+#' has been re-used for multivariate models. The fact that multiple rows per response are returned only for some
+#' model types reflects the fact that tidybayes takes the approach of tidying whatever output is given to us, and
+#' the output from different modeling functions differs on this point.
 #' See \code{vignette("tidy-brms")} and \code{vignette("tidy-rstanarm")} for examples of dealing with output
 #' from ordinal models using both approaches.
 #' @param dpar For \code{fitted_draws} and \code{add_fitted_draws}: Should distributional regression
@@ -110,7 +115,8 @@ add_predicted_samples = function(newdata, model, ..., n = NULL) {
 #' and \code{predicted_draws} contains a \code{.prediction} column containing draws from the posterior predictive
 #' distribution. For convenience, the resulting data frame comes grouped by the original input rows.
 #' @author Matthew Kay
-#' @seealso \code{\link{spread_draws}}
+#' @seealso \code{\link{add_draws}} for the variant of these functions for use with packages that do not have
+#' explicit support for these functions yet. See \code{\link{spread_draws}} for manipulating posteriors directly.
 #' @keywords manip
 #' @examples
 #' \donttest{
@@ -155,13 +161,13 @@ add_predicted_samples = function(newdata, model, ..., n = NULL) {
 #' @importFrom dplyr mutate sample_n ungroup group_by
 #' @importFrom stats fitted predict
 #' @export
-add_predicted_draws = function(newdata, model, prediction = ".prediction", ..., n = NULL, seed = NULL, re_formula = NULL) {
-  predicted_draws(model, newdata, prediction, ..., n = n, seed = seed, re_formula = re_formula)
+add_predicted_draws = function(newdata, model, prediction = ".prediction", ..., n = NULL, seed = NULL, re_formula = NULL, category = ".category") {
+  predicted_draws(model, newdata, prediction, ..., n = n, seed = seed, re_formula = re_formula, category = category)
 }
 
 #' @rdname add_predicted_draws
 #' @export
-predicted_draws = function(model, newdata, prediction = ".prediction", ..., n = NULL, seed = NULL, re_formula = NULL) {
+predicted_draws = function(model, newdata, prediction = ".prediction", ..., n = NULL, seed = NULL, re_formula = NULL, category = ".category") {
   UseMethod("predicted_draws")
 }
 
@@ -173,7 +179,7 @@ predicted_draws.default = function(model, newdata, ...) {
 
 #' @rdname add_predicted_draws
 #' @export
-predicted_draws.stanreg = function(model, newdata, prediction = ".prediction", ..., n = NULL, seed = NULL, re_formula = NULL) {
+predicted_draws.stanreg = function(model, newdata, prediction = ".prediction", ..., n = NULL, seed = NULL, re_formula = NULL, category = ".category") {
   if (!requireNamespace("rstanarm", quietly = TRUE)) {
     stop("The `rstanarm` package is needed for `predicted_draws` to support `stanreg` objects.", call. = FALSE) # nocov
   }
@@ -183,13 +189,13 @@ predicted_draws.stanreg = function(model, newdata, prediction = ".prediction", .
   )
 
   fitted_predicted_draws_brmsfit_(rstanarm::posterior_predict, model, newdata, output_name = prediction, ...,
-    draws = n, seed = seed, re.form = re_formula, is_brms = FALSE
+    draws = n, seed = seed, re.form = re_formula, category = category, is_brms = FALSE
   )
 }
 
 #' @rdname add_predicted_draws
 #' @export
-predicted_draws.brmsfit = function(model, newdata, prediction = ".prediction", ..., n = NULL, seed = NULL, re_formula = NULL) {
+predicted_draws.brmsfit = function(model, newdata, prediction = ".prediction", ..., n = NULL, seed = NULL, re_formula = NULL, category = ".category") {
   if (!requireNamespace("brms", quietly = TRUE)) {
     stop("The `brms` package is needed for `predicted_draws` to support `brmsfit` objects.", call. = FALSE) # nocov
   }
@@ -199,7 +205,7 @@ predicted_draws.brmsfit = function(model, newdata, prediction = ".prediction", .
   )
 
   fitted_predicted_draws_brmsfit_(predict, model, newdata, output_name = prediction, ...,
-    nsamples = n, seed = seed, re_formula = re_formula
+    nsamples = n, seed = seed, re_formula = re_formula, category = category
   )
 }
 

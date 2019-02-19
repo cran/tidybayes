@@ -70,7 +70,7 @@
 #' summary and uncertainty interval.
 #' @author Matthew Kay
 #' @seealso See \code{\link{geom_eye}} and \code{\link{geom_eyeh}} for the mirrored-density
-#' (full "eye") versions. See \code{\link{geom_density_ridges}} and \code{\link{stat_summaryh}} for the geoms
+#' (full "eye") versions. See \code{\link[ggridges]{geom_density_ridges}} and \code{\link{stat_summaryh}} for the geoms
 #' this function is based on.
 #' @keywords manip
 #' @examples
@@ -87,7 +87,6 @@
 #'
 #' @importFrom utils modifyList
 #' @importFrom ggstance stat_summaryh geom_pointrangeh
-#' @importFrom ggridges geom_density_ridges
 #' @import ggplot2
 #' @export
 geom_halfeyeh = function(

@@ -11,6 +11,7 @@ knitr::opts_chunk$set(
 ## ----setup, message = FALSE, warning = FALSE-----------------------------
 library(magrittr)
 library(dplyr)
+library(purrr)
 library(forcats)
 library(tidyr)
 library(modelr)
@@ -22,6 +23,8 @@ library(cowplot)
 library(rstan)
 library(brms)
 library(ggrepel)
+library(RColorBrewer)
+library(gganimate)
 
 theme_set(theme_tidybayes() + panel_border() + background_grid())
 
@@ -44,7 +47,7 @@ set.seed(5)
 n = 10
 n_condition = 5
 ABC =
-  data_frame(
+  tibble(
     condition = rep(c("A","B","C","D","E"), n),
     response = rnorm(n * 5, c(0,1,2,1,-1), 0.5)
   )
@@ -157,7 +160,7 @@ m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   mutate(condition_mean = b_Intercept + r_condition) %>%
   ggplot(aes(y = condition, x = condition_mean)) +
-  geom_halfeyeh() 
+  geom_halfeyeh()
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ABC %>%
@@ -176,7 +179,7 @@ ABC %>%
 ABC %>%
   data_grid(condition) %>%
   add_fitted_draws(m) %>%
-  do(data_frame(.value = quantile(.$.value, ppoints(100)))) %>%
+  do(tibble(.value = quantile(.$.value, ppoints(100)))) %>%
   ggplot(aes(x = .value)) +
   geom_dotplot(binwidth = .04) +
   facet_grid(fct_rev(condition) ~ .) +
@@ -194,7 +197,7 @@ ABC %>%
   data_grid(condition) %>%
   add_predicted_draws(m) %>%
   ggplot(aes(y = condition, x = .prediction)) +
-  stat_intervalh() +
+  stat_intervalh(.width = c(.50, .80, .95, .99)) +
   geom_point(aes(x = response), data = ABC) +
   scale_color_brewer()
 
@@ -214,6 +217,23 @@ ABC %>%
   stat_pointintervalh(aes(x = .value), data = fits, .width = c(.66, .95), position = position_nudge(y = -0.2)) +
   geom_point() +
   scale_color_brewer()
+
+## ---------------------------------------------------------------------------------------------------------------------
+ABC %>%
+  data_grid(condition) %>%
+  add_fitted_draws(m, dpar = c("mu", "sigma"), n = 100) %>%
+  mutate(
+    lower = qnorm(.001, mu, sigma),
+    upper = qnorm(.999, mu, sigma),
+    response = map2(lower, upper, seq, length.out = 101),
+    density = pmap(list(response, mu, sigma), dnorm)
+  ) %>%
+  unnest() %>%
+  ggplot(aes(x = response, y = condition)) +
+  geom_ridgeline(aes(height = density, group = interaction(condition, .draw)), 
+    fill = NA, color = adjustcolor("black", alpha.f = 1/20)
+  ) +
+  geom_point(data = ABC, shape = 21, fill = brewer.pal(3, "Blues")[[2]], size = 2)
 
 ## ---- results = "hide", message = FALSE, warning = FALSE--------------------------------------------------------------
 m_mpg = brm(mpg ~ hp * cyl, data = mtcars)
@@ -240,6 +260,23 @@ mtcars %>%
   scale_color_brewer(palette = "Dark2")
 
 ## ---------------------------------------------------------------------------------------------------------------------
+set.seed(123456)
+ndraws = 50
+
+p = mtcars %>%
+  group_by(cyl) %>%
+  data_grid(hp = seq_range(hp, n = 101)) %>%
+  add_fitted_draws(m_mpg, n = ndraws) %>%
+  ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
+  geom_line(aes(y = .value, group = paste(cyl, .draw))) +
+  geom_point(data = mtcars) +
+  scale_color_brewer(palette = "Dark2") +
+  transition_states(.draw, 0, 1) +
+  shadow_mark(future = TRUE, color = "gray50", alpha = 1/20)
+
+animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 384, res = 96, type = "cairo")
+
+## ---------------------------------------------------------------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
@@ -256,14 +293,14 @@ mtcars %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
   add_predicted_draws(m_mpg) %>%
   ggplot(aes(x = hp, y = mpg)) +
-  stat_lineribbon(aes(y = .prediction), .width = c(.99, .95, .8, .5)) +
+  stat_lineribbon(aes(y = .prediction), .width = c(.99, .95, .8, .5), color = brewer.pal(5, "Blues")[[5]]) +
   geom_point(data = mtcars) +
   scale_fill_brewer() +
-  facet_grid(. ~ cyl)
+  facet_grid(. ~ cyl, space = "free_x", scales = "free_x")
 
 ## ---------------------------------------------------------------------------------------------------------------------
 set.seed(1234)
-AB = data_frame(
+AB = tibble(
   group = rep(c("a", "b"), each = 20),
   response = rnorm(40, mean = rep(c(1, 5), each = 20), sd = rep(c(1, 3), each = 20))
 )
@@ -334,7 +371,7 @@ head(mtcars_clean)
 m_cyl = brm(cyl ~ mpg, data = mtcars_clean, family = cumulative, seed = 58393)
 
 ## ---------------------------------------------------------------------------------------------------------------------
-data_frame(mpg = 21) %>%
+tibble(mpg = 21) %>%
   add_fitted_draws(m_cyl) %>%
   median_qi(.value)
 
@@ -380,7 +417,7 @@ data_plot_with_mean = mtcars_clean %>%
   geom_point(aes(y = as.numeric(as.character(cyl)), fill = cyl), data = mtcars_clean, shape = 21, size = 2) +
   geom_text(aes(x = mpg + 4), label = "E[cyl | mpg]", data = label_data_function, hjust = 0) +
   geom_segment(aes(yend = cyl, xend = mpg + 3.9), data = label_data_function) +
-  scale_fill_brewer(palette = "Dark2", name = "cyl")
+  scale_fill_brewer(palette = "Set2", name = "cyl")
 
 plot_grid(ncol = 1, align = "v",
   data_plot_with_mean,
@@ -421,12 +458,21 @@ mtcars_clean %>%
     hjust = 0, color = "red", label.size = NA)
 
 ## ---------------------------------------------------------------------------------------------------------------------
+set.seed(12345)
+
 mtcars_clean %>%
   select(mpg) %>%
   add_predicted_draws(m_cyl, prediction = "cyl") %>%
-  group_by(.draw) %>%
-  count(cyl) %>%
-  complete(cyl, fill = list(n = 0)) %>%
+  # once dplyr 3 hits this can be replaced with count() (since it will include 0s)
+  # until then this ugly code is faster than count() + complete()
+  ungroup() %>%
+  nest(-.draw) %>%
+  mutate(counts = map(data, ~
+    table(.x$cyl) %>%
+    as.data.frame() %>%
+    set_names("cyl", "n")
+  )) %>%
+  unnest(counts) %>%
   gather_pairs(cyl, n) %>%
   ggplot(aes(.x, .y)) +
   geom_count(color = "gray75") +
@@ -444,8 +490,9 @@ esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_brm, dpar = TRUE) %>%
   ggplot(aes(x = agegp, y = .value, color = .category)) +
-  stat_pointinterval(position = position_dodge(width = .4), .width = c(.66, .95), show.legend = TRUE) +
-  scale_size_continuous(guide = FALSE)
+  stat_pointinterval(position = position_dodge(width = .4)) +
+  scale_size_continuous(guide = FALSE) +
+  scale_color_manual(values = brewer.pal(6, "Blues")[-c(1,2)])
 
 ## ----fig.height = 2.25, fig.width = 8---------------------------------------------------------------------------------
 esoph %>%
