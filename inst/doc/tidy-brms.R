@@ -399,6 +399,38 @@ plot_grid(ncol = 1, align = "v",
 )
 
 ## ---------------------------------------------------------------------------------------------------------------------
+ndraws = 50
+
+p = mtcars_clean %>%
+  data_grid(mpg = seq_range(mpg, n = 101)) %>%
+  add_fitted_draws(m_cyl, value = "P(cyl | mpg)", category = "cyl") %>%
+  ggplot(aes(x = mpg, y = `P(cyl | mpg)`, color = cyl)) +
+  # we remove the `.draw` column from the data for stat_lineribbon so that the same ribbons
+  # are drawn on every frame (since we use .draw to determine the transitions below)
+  stat_lineribbon(aes(fill = cyl), alpha = 1/5, color = NA, data = . %>% select(-.draw)) +
+  # we use sample_draws to subsample at the level of geom_line (rather than for the full dataset
+  # as in previous HOPs examples) because we need the full set of draws for stat_lineribbon above
+  geom_line(aes(group = paste(.draw, cyl)), size = 1, data = . %>% sample_draws(ndraws)) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  transition_manual(.draw)
+
+animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 192, res = 96, type = "cairo")
+
+## ---------------------------------------------------------------------------------------------------------------------
+tibble(mpg = 20) %>%
+  add_fitted_draws(m_cyl, value = "P(cyl | mpg = 20)", category = "cyl") %>%
+  ungroup() %>%
+  select(.draw, cyl, `P(cyl | mpg = 20)`) %>%
+  gather_pairs(cyl, `P(cyl | mpg = 20)`, triangle = "both") %>%
+  filter(.row != .col) %>%
+  ggplot(aes(.x, .y)) +
+  geom_point(alpha = 1/50) +
+  facet_grid(.row ~ .col) +
+  ylab("P(cyl = row | mpg = 20)") +
+  xlab("P(cyl = col | mpg = 20)")
+
+## ---------------------------------------------------------------------------------------------------------------------
 label_data_function = . %>% 
   ungroup() %>%
   filter(mpg == quantile(mpg, .47)) %>%

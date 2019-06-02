@@ -51,6 +51,8 @@ test_that("[add_]fitted_draws works on a simple rstanarm model", {
   expect_equal(fitted_draws(m_hp_wt, mtcars_tbl), ref)
   expect_equal(add_fitted_draws(mtcars_tbl, m_hp_wt), ref)
   expect_equal(add_fitted_draws(mtcars_tbl, m_hp_wt, value = "foo"), rename(ref, foo = .value))
+  expect_equal(linpred_draws(m_hp_wt, mtcars_tbl), ref)
+  expect_equal(add_linpred_draws(mtcars_tbl, m_hp_wt), ref)
 
   #subsetting to test the `n` argument
   set.seed(1234)
@@ -234,7 +236,7 @@ test_that("[add_]fitted_draws works on simple brms models with multiple dpars", 
 })
 
 
-test_that("[add_]fitted_draws works on brms models with categorical outcomes (response scale)", {
+test_that("[add_]fitted_draws works on brms models with ordinal outcomes (response scale)", {
   skip_if_not_installed("brms")
   m_cyl_mpg = readRDS("../models/models.brms.m_cyl_mpg.rds")
 
@@ -264,11 +266,36 @@ test_that("[add_]fitted_draws works on brms models with categorical outcomes (re
 })
 
 
-test_that("[add_]fitted_draws works on brms models with categorical outcomes (linear scale)", {
+test_that("[add_]fitted_draws works on brms models with ordinal outcomes (linear scale)", {
   skip_if_not_installed("brms")
   m_cyl_mpg = readRDS("../models/models.brms.m_cyl_mpg.rds")
 
   fits = fitted(m_cyl_mpg, mtcars_tbl, summary = FALSE, scale = "linear") %>%
+    as.data.frame() %>%
+    set_names(seq_len(ncol(.))) %>%
+    mutate(
+      .chain = NA_integer_,
+      .iteration = NA_integer_,
+      .draw = seq_len(n())
+    ) %>%
+    gather(.row, .value, -.chain, -.iteration, -.draw) %>%
+    as_tibble()
+
+  ref = mtcars_tbl %>%
+    mutate(.row = rownames(.)) %>%
+    inner_join(fits, by = ".row") %>%
+    mutate(.row = as.integer(.row))
+
+  expect_equal(fitted_draws(m_cyl_mpg, mtcars_tbl, scale = "linear"), ref)
+  expect_equal(add_fitted_draws(mtcars_tbl, m_cyl_mpg, scale = "linear"), ref)
+})
+
+test_that("[add_]fitted_draws works on brms models with dirichlet outcomes (response scale)", {
+  skip_if_not_installed("brms")
+  m_dirich = readRDS("../models/models.brms.m_dirich.rds")
+
+  grid = tibble(x = c("A", "B"))
+  fits = fitted(m_dirich, grid, summary = FALSE) %>%
     array2df(list(.draw = NA, .row = NA, .category = TRUE), label.x = ".value") %>%
     mutate(
       .chain = NA_integer_,
@@ -277,33 +304,36 @@ test_that("[add_]fitted_draws works on brms models with categorical outcomes (li
       .draw = as.integer(.draw)
     )
 
-  ref = inner_join(mtcars_tbl %>% mutate(.row = as.integer(rownames(.))), fits, by = ".row")
+  ref = inner_join(grid %>% mutate(.row = as.integer(rownames(.))), fits, by = ".row")
 
-  expect_equal(fitted_draws(m_cyl_mpg, mtcars_tbl, scale = "linear"), ref)
-  expect_equal(add_fitted_draws(mtcars_tbl, m_cyl_mpg, scale = "linear"), ref)
+  expect_equal(fitted_draws(m_dirich, grid), ref)
 })
 
 
-test_that("[add_]fitted_draws allows extraction of dpar on brms models with categorical outcomes (linear scale)", {
+test_that("[add_]fitted_draws allows extraction of dpar on brms models with ordinal outcomes (linear scale)", {
   skip_if_not_installed("brms")
   m_cyl_mpg = readRDS("../models/models.brms.m_cyl_mpg.rds")
 
   fits = fitted(m_cyl_mpg, mtcars_tbl, summary = FALSE, scale = "linear") %>%
-    array2df(list(.draw = NA, .row = NA, .category = TRUE), label.x = ".value")
-
-  mu_fits = fitted(m_cyl_mpg, mtcars_tbl, summary = FALSE, scale = "linear", dpar = "mu") %>%
-    array2df(list(.draw = NA, .row = NA), label.x = "mu")
-
-  ref = mtcars_tbl %>% mutate(.row = as.integer(rownames(.))) %>%
-    inner_join(fits, by = ".row") %>%
-    left_join(mu_fits, by = c(".row", ".draw")) %>%
+    as.data.frame() %>%
+    set_names(seq_len(ncol(.))) %>%
     mutate(
       .chain = NA_integer_,
       .iteration = NA_integer_,
-      .row = as.integer(.row),
-      .draw = as.integer(.draw),
-      .category = factor(.category)
-    )
+      .draw = seq_len(n())
+    ) %>%
+    gather(.row, .value, -.chain, -.iteration, -.draw) %>%
+    as_tibble()
+
+  fits$mu = fitted(m_cyl_mpg, mtcars_tbl, summary = FALSE, dpar = "mu", scale = "linear") %>%
+    as.data.frame() %>%
+    gather(.row, mu) %$%
+    mu
+
+  ref = mtcars_tbl %>%
+    mutate(.row = rownames(.)) %>%
+    inner_join(fits, by = ".row") %>%
+    mutate(.row = as.integer(.row))
 
   expect_equal(fitted_draws(m_cyl_mpg, mtcars_tbl, scale = "linear", dpar = TRUE), ref)
   expect_equal(add_fitted_draws(mtcars_tbl, m_cyl_mpg, scale = "linear", dpar = "mu"), ref)
