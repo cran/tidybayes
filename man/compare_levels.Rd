@@ -5,13 +5,19 @@
 \title{Compare the value of draws of some variable from a Bayesian model for
 different levels of a factor}
 \usage{
-compare_levels(data, variable, by, fun = `-`, comparison = "default",
+compare_levels(
+  data,
+  variable,
+  by,
+  fun = `-`,
+  comparison = "default",
   draw_indices = c(".chain", ".iteration", ".draw"),
-  ignore_groups = ".row")
+  ignore_groups = ".row"
+)
 }
 \arguments{
 \item{data}{Long-format \code{data.frame} of draws such as returned by
-\code{\link{spread_draws}} or \code{\link{gather_draws}}. If \code{data}
+\code{\link[=spread_draws]{spread_draws()}} or \code{\link[=gather_draws]{gather_draws()}}. If \code{data}
 is a grouped data frame, comparisons will be made within groups (if
 one of the groups in the data frame is the \code{by} column, that specific
 group will be ignored, as it is not possible to make comparisons both
@@ -30,13 +36,13 @@ result of this function.}
 
 \item{comparison}{One of (a) the comparison types \code{ordered},
 \code{control}, \code{pairwise}, or \code{default} (may also be given as
-strings, e.g. \code{"ordered"}), see `Details`; (b) a user-specified
+strings, e.g. \code{"ordered"}), see \emph{Details}; (b) a user-specified
 function that takes a \code{factor} and returns a list of pairs of names of
 levels to compare (as strings) and/or unevaluated expressions containing
 representing the comparisons to make; or (c) a list of pairs of names of
 levels to compare (as strings) and/or unevaluated expressions representing
 the comparisons to make, e.g.: \code{list(c("a", "b"), c("b", "c"))} or
-\code{.(a - b, b - c)}, both of which would compare level \code{"a"} against
+\code{exprs(a - b, b - c)}, both of which would compare level \code{"a"} against
 \code{"b"} and level \code{"b"} against \code{"c"}. Note that the
 unevaluated expression syntax ignores the \code{fun} argument, can include
 any other functions desired (e.g. variable transformations), and can even
@@ -48,13 +54,13 @@ should be treated as indices when making the comparison (i.e. values of
 unique combination of levels of \code{draw_indices}). Columns in \code{draw_indices}
 not found in \code{data} are ignored. The default is \code{c(".chain",".iteration",".draw")},
 which are the same names used for chain/iteration/draw indices returned by
-\code{\link{spread_draws}} or \code{\link{gather_draws}}; thus if you are using \code{compare_levels}
-with \code{\link{spread_draws}} or \code{\link{gather_draws}} you generally should not need to change this
+\code{\link[=spread_draws]{spread_draws()}} or \code{\link[=gather_draws]{gather_draws()}}; thus if you are using \code{compare_levels}
+with \code{\link[=spread_draws]{spread_draws()}} or \code{\link[=gather_draws]{gather_draws()}} you generally should not need to change this
 value.}
 
 \item{ignore_groups}{character vector of names of groups to ignore by
 default in the input grouping. This is primarily provided to make it
-easier to pipe output of \code{\link{add_fitted_draws}} into this function,
+easier to pipe output of \code{\link[=add_fitted_draws]{add_fitted_draws()}} into this function,
 as that function provides a \code{".row"} output column that is grouped,
 but which is virtually never desired to group by when using \code{compare_levels}.}
 }
@@ -66,7 +72,7 @@ comparison of pairs of levels of \code{by} in \code{data}, and
 }
 \description{
 Given posterior draws from a Bayesian model in long format (e.g. as
-returned by \code{\link{spread_draws}}), compare the value of a variable in those draws
+returned by \code{\link[=spread_draws]{spread_draws()}}), compare the value of a variable in those draws
 across different paired combinations of levels of a factor.
 }
 \details{
@@ -78,11 +84,10 @@ by \code{comparison}. By default, all pairwise comparisons are generated if
 \code{by} is \code{ordered}.
 
 The included \code{comparison} types are: \itemize{ \item \code{ordered}:
-compare each level \code{i} with level \code{i - 1}; e.g. \code{fun(i, i -
-1)} \item \code{pairwise}: compare each level of \code{by} with every other
+compare each level \code{i} with level \code{i - 1}; e.g. \code{fun(i, i - 1)} \item \code{pairwise}: compare each level of \code{by} with every other
 level.  \item \code{control}: compare each level of \code{by} with the first
 level of \code{by}.  If you wish to compare with a different level, you can
-first apply \code{\link{relevel}} to \code{by} to set the control
+first apply \code{\link[=relevel]{relevel()}} to \code{by} to set the control
 (reference) level.  \item \code{default}: use \code{ordered} if
 \code{is.ordered(by)} and \code{pairwise} otherwise.  }
 }
@@ -106,7 +111,7 @@ RankCorr \%>\%
   filter(j == 1) \%>\%
   compare_levels(b, by = i, comparison = control) \%>\%
   ggplot(aes(x = b, y = i)) +
-  geom_halfeyeh()
+  stat_halfeyeh()
 
 # Or let's plot comparisons of all levels of j within
 # all levels of i
@@ -115,12 +120,12 @@ RankCorr \%>\%
   group_by(i) \%>\%
   compare_levels(b, by = j) \%>\%
   ggplot(aes(x = b, y = j)) +
-  geom_halfeyeh() +
+  stat_halfeyeh() +
   facet_grid(cols = vars(i))
 
 }
 \seealso{
-\code{\link{spread_draws}} and \code{\link{gather_draws}}.
+\code{\link[=spread_draws]{spread_draws()}} and \code{\link[=gather_draws]{gather_draws()}}.
 }
 \author{
 Matthew Kay

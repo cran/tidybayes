@@ -12,7 +12,7 @@ deparse0 = function(expr, width.cutoff = 500, ...) {
 
 # Based on https://stackoverflow.com/a/14838753
 # Escapes a string for inclusion in a regex
-escape_regex <- function(string) {
+escape_regex = function(string) {
   gsub("(\\W)", "\\\\\\1", string)
 }
 
@@ -28,7 +28,24 @@ draw_from_chain_and_iteration_ = function(chain, iteration) {
   as.integer(ifelse(is.na(chain), 0, chain - 1) * max_iteration + iteration)
 }
 
-.Deprecated_argument_alias = function(new_arg, old_arg, fun = as.character(sys.call(sys.parent()))[1L]) {
+
+# deprecations and warnings -----------------------------------------------
+
+#' @importFrom rlang enexprs
+.Deprecated_arguments = function(old_names, ..., message = "", which = -1, fun = as.character(sys.call(which))[[1]]) {
+  deprecated_args = intersect(old_names, names(enexprs(...)))
+
+  if (length(deprecated_args) > 0) {
+    stop(
+      "\nIn ", fun, "(): The `", deprecated_args[[1]], "` argument is deprecated.\n",
+      message,
+
+      call. = FALSE
+    )
+  }
+}
+
+.Deprecated_argument_alias = function(new_arg, old_arg, which = -1, fun = as.character(sys.call(which))[[1]]) {
   if (missing(old_arg)) {
     new_arg
   } else {
@@ -48,7 +65,7 @@ draw_from_chain_and_iteration_ = function(chain, iteration) {
   }
 }
 
-stop_on_non_generic_arg_ <- function(parent_dot_args, method_type, ..., fun = as.character(sys.call(sys.parent()))[1L]) {
+stop_on_non_generic_arg_ = function(parent_dot_args, method_type, ..., which = -1, fun = as.character(sys.call(which))[[1]]) {
   old_args = list(...)
 
   if (any(parent_dot_args %in% old_args)) {

@@ -4,51 +4,26 @@
 ###############################################################################
 
 
-# Names that should be suppressed from global variable check by codetools
-# Names used broadly should be put in _global_variables.R
-globalVariables(c("...width.."))
-
-
 #' Multiple probability interval plots (ggplot stat)
 #'
-#' A combination of \code{\link{stat_summary}} / \code{\link{stat_summaryh}} and
-#' \code{\link{geom_interval}} / \code{\link{geom_intervalh}} with sensible defaults.
-#' While the corresponding \code{geom}s are intended for use on
-#' data frames that have already been summarized using a \code{\link{point_interval}}
-#' function, these \code{stat}s are intended for use directly on data frames of draws, and
-#' will perform the summarization using a \code{\link{point_interval}} function.
+#' A combination of [stat_sample_slabinterval()] and
+#' [geom_slabinterval()] with sensible defaults.
+#' While the corresponding `geom`s are intended for use on
+#' data frames that have already been summarized using a [point_interval()]
+#' function, these `stat`s are intended for use directly on data frames of draws, and
+#' will perform the summarization using a [point_interval()] function.
 #'
-#' @param mapping The aesthetic mapping, usually constructed with
-#' \code{\link{aes}} or \code{\link{aes_string}}. Only needs to be set at the
-#' layer level if you are overriding the plot defaults.
-#' @param data A layer specific dataset - only needed if you want to override
-#' the plot defaults.
-#' @param geom Use to override the default connection between
-#' \code{geom_interval}/\code{geom_interval} and \code{stat_interval}/\code{stat_intervalh}.
-#' @param position The position adjustment to use for overlapping points on this layer.
-#' @param ...  Other arguments passed to \code{\link{layer}}. They may also be arguments to the paired geom.
-#' @param point_interval A function that when given a vector should
-#'   return a data frame with variables \code{y}, \code{ymin}, \code{ymax}, and \code{.width}; or
-#'   \code{x}, \code{xmin}, \code{xmax}, and \code{.width}. \strong{Either is acceptable}: output
-#'   will be converted into the \code{y}-based aesthetics for \code{stat_interval} and the
-#'   \code{x}-based aesthetics for \code{stat_intervalh}. See the \code{point_interval} family of functions.
-#' @param fun.data Similar to \code{point_interval}, for compatibility with \code{stat_summary}.
-#'   Note: if the summary function is passed using \code{fun.data}, the \code{x} and \code{y}-based aesthetics
-#'   are not converted to the correct form automatically.
-#' @param .width The \code{.width} argument passed to \code{point_interval}.
-#' @param .prob Deprecated. Use \code{.width} instead.
-#' @param fun.args Other optional arguments passed to \code{fun.data}.
-#' @param na.rm	If \code{FALSE}, the default, missing values are removed with a warning. If \code{TRUE}, missing
-#' values are silently removed.
-#' @param show.legend Should this layer be included in the legends? \code{NA}, the default, includes if any aesthetics
-#' are mapped. \code{FALSE} never includes, and \code{TRUE} always includes.
-#' @param inherit.aes If \code{FALSE}, overrides the default aesthetics, rather than combining with them. This is
-#' most useful for helper functions that define both data and aesthetics and shouldn't inherit behavior from the
-#' default plot specification, e.g. borders.
-#' @seealso See \code{\link{geom_interval}} / \code{\link{geom_intervalh}} for the geom versions, intended for use on
-#' intervals that have already been summarized using a \code{\link{point_interval}} function.
-#' See \code{\link{stat_pointinterval}} / \code{\link{stat_pointintervalh}} for a similar stat intended for
+#' @eval rd_slabinterval_aesthetics(geom = GeomInterval, geom_name = "geom_interval", stat = StatInterval)
+#' @inheritParams stat_pointinterval
+#' @inheritParams geom_slabinterval
+#' @seealso See [geom_interval()] / [geom_intervalh()] for the geom versions, intended
+#' for use on points and intervals that have already been summarized using a [point_interval()] function.
+#' See [stat_pointinterval()] / [stat_pointintervalh()] for a similar stat intended for
 #' point summaries and intervals.
+#' See [stat_sample_slabinterval()] for a variety of other
+#' stats that combine intervals with densities and CDFs.
+#' See [geom_slabinterval()] for the geom that these geoms wrap. All parameters of that geom are
+#' available to these geoms.
 #' @examples
 #'
 #' library(magrittr)
@@ -69,59 +44,67 @@ globalVariables(c("...width.."))
 #'   scale_color_brewer()
 #'
 #' @export
-stat_interval <- function(mapping = NULL, data = NULL,
-  geom = "interval", position = "identity",
+stat_interval = function(
+  mapping = NULL,
+  data = NULL,
+  geom = "interval",
+  position = "identity",
   ...,
+
+  orientation = "vertical",
+  interval_function = NULL,
+  interval_args = list(),
   point_interval = median_qi,
-  fun.data = NULL,
   .width = c(.50, .80, .95),
-  .prob,
-  fun.args = list(),
+  show_point = FALSE,
+  show_slab = FALSE,
   na.rm = FALSE,
+
   show.legend = NA,
-  inherit.aes = TRUE
+  inherit.aes = TRUE,
+
+  #deprecated arguments
+  .prob,
+  fun.data,
+  fun.args
 ) {
+  interval_function = .Deprecated_argument_alias(interval_function, fun.data)
+  interval_args = .Deprecated_argument_alias(interval_args, fun.args)
   .width = .Deprecated_argument_alias(.width, .prob)
 
-  # Probs are drawn on top of each other in order by geom_interval, so we have to sort in decreasing order
-  # to make sure the largest interval is not drawn last (over-writing all other intervals)
-  .width %<>% sort(decreasing = TRUE)
-
-  fun.data = fun.data %||% vertical_aes(point_interval)
-
-  l = layer(
+  layer(
     data = data,
     mapping = mapping,
-    #we can re-use StatPointinterval internally because it does exactly the same thing
-    #we would have done for a StatInterval.
-    stat = StatPointinterval,
+    stat = StatInterval,
     geom = geom,
     position = position,
     show.legend = show.legend,
     inherit.aes = inherit.aes,
     params = list(
-      fun.data = fun.data,
+      orientation = orientation,
+      interval_function = interval_function,
+      interval_args = interval_args,
+      point_interval = point_interval,
       .width = .width,
-      fun.args = fun.args,
+      show_point = show_point,
+      show_slab = show_slab,
       na.rm = na.rm,
       ...
     )
   )
-
-  #provide some default computed aesthetics
-  default_computed_aesthetics = aes(color = forcats::fct_rev(ordered(...width..)))  # nolint
-
-  compute_aesthetics = l$compute_aesthetics
-  l$compute_aesthetics = function(self, data, plot) {
-    apply_default_computed_aesthetics(self, plot, default_computed_aesthetics)
-    compute_aesthetics(data, plot)
-  }
-
-  map_statistic = l$map_statistic
-  l$map_statistic = function(self, data, plot) {
-    apply_default_computed_aesthetics(self, plot, default_computed_aesthetics)
-    map_statistic(data, plot)
-  }
-
-  l
 }
+
+StatInterval = ggproto("StatInterval", StatPointinterval,
+  default_aes = defaults(aes(
+    color = stat(level)
+  ), StatPointinterval$default_aes),
+
+  default_params = defaults(list(
+    show_point = FALSE,
+    .width = c(.50, .80, .95)
+  ), StatPointinterval$default_params)
+)
+# have to remove this here instead of in call to defaults()
+# because otherwise it stays in the list as a value = NULL
+# instead of being removed
+StatInterval$default_aes$size = NULL

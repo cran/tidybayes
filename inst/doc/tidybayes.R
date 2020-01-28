@@ -1,14 +1,19 @@
 params <-
 list(EVAL = TRUE)
 
-## ----chunk_options, include=FALSE----------------------------------------
+## ----chunk_options, include=FALSE-------------------------------------------------------------------------------------
 knitr::opts_chunk$set(
-  fig.width = 6, 
-  fig.height = 4,
+  fig.width = 4.5,
+  fig.height = 3,
   eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
 )
+if (capabilities("cairo")) {
+  knitr::opts_chunk$set(
+    dev.args = list(png = list(type = "cairo"))
+  )
+}
 
-## ----setup, message = FALSE, warning = FALSE-----------------------------
+## ----setup, message = FALSE, warning = FALSE--------------------------------------------------------------------------
 library(magrittr)
 library(dplyr)
 library(forcats)
@@ -25,11 +30,10 @@ library(MCMCglmm)
 library(tidybayes)
 library(cowplot)
 library(RColorBrewer)
-library(gganimate)
 
-theme_set(theme_tidybayes() + panel_border() + background_grid())
+theme_set(theme_tidybayes() + panel_border())
 
-## ---- eval=FALSE---------------------------------------------------------
+## ---- eval=FALSE------------------------------------------------------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
 #  options(mc.cores = parallel::detectCores())
 
@@ -114,51 +118,47 @@ m %>%
   group_by(condition) %>%    # this line not necessary (done automatically by spread_draws)
   median_qi(condition_mean)
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 3, fig.height = 2.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   median_qi() %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointintervalh()
-
-## -------------------------------------------------------------------------------------------------
-m %>%
-  spread_draws(condition_mean[condition]) %>%
-  median_qi() %>%
+  # `geom_pointintervalh` includes `xmin = .lower` and `xmax = .upper` in its default 
+  # aesthetics, so we can omit them here
   ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
   geom_pointintervalh()
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 3, fig.height = 2.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
   stat_pointintervalh()
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
-  geom_violinh(color = NA, fill = "gray65") +
-  stat_pointintervalh(.width = c(.95, .66))
+  stat_eyeh()
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
-  geom_eyeh()
+  stat_halfeyeh(.width = c(.99, .8))
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 4.75, fig.height = 2.5-----------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
-  geom_halfeyeh(.width = c(.99, .8))
+  ggplot(aes(y = fct_rev(condition), x = condition_mean, fill = stat(abs(x) < .8))) +
+  stat_halfeyeh() +
+  geom_vline(xintercept = c(-.8, .8), linetype = "dashed") +
+  scale_fill_manual(values = c("gray80", "skyblue"))
 
 ## -------------------------------------------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   median_qi(.width = c(.95, .8, .5))
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 3, fig.height = 2.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   median_qi(.width = c(.95, .66)) %>%
@@ -166,28 +166,25 @@ m %>%
     size = -.width)) +               # smaller probability interval => thicker line
   geom_pointintervalh()
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 3, fig.height = 2.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   median_qi(.width = c(.95, .66)) %>%
   ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
   geom_pointintervalh()
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   median_qi(.width = c(.95, .8, .5)) %>%
   ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
-  geom_pointintervalh(size_range = c(0.5, 2))
+  geom_pointintervalh(interval_size_range = c(0.5, 2))
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 5, fig.height = 3.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
-  do(tibble(condition_mean = quantile(.$condition_mean, ppoints(100)))) %>%
-  ggplot(aes(x = condition_mean)) +
-  geom_dotplot(binwidth = .04) +
-  facet_grid(fct_rev(condition) ~ .) +
-  scale_y_continuous(breaks = NULL)
+  ggplot(aes(x = condition_mean, y = fct_rev(condition))) +
+  stat_dotsh(quantiles = 100)
 
 ## -------------------------------------------------------------------------------------------------
 set.seed(123)
@@ -199,15 +196,16 @@ multimodal_draws = tibble(
 multimodal_draws %>%
   mode_hdi(x, .width = .80)
 
-## ---- fig.height = 3, fig.width = 8---------------------------------------------------------------
+## ---- fig.height = 3, fig.width = 6.5-------------------------------------------------------------
 multimodal_draws %>%
   ggplot(aes(x = x)) +
-  stat_density(fill = "gray75") +
-  stat_pointintervalh(aes(y = -0.05), point_interval = median_qi, .width = c(.95, .80)) +
-  annotate("text", label = "median, 80% and 95% quantile intervals", x = 6, y = -0.05, hjust = 0, vjust = 0.3) +
-  stat_pointintervalh(aes(y = -0.025), point_interval = mode_hdi, .width = c(.95, .80)) +
-  annotate("text", label = "mode, 80% and 95% highest-density intervals", x = 6, y = -0.025, hjust = 0, vjust = 0.3) +
-  xlim(-3.5, 14.5)
+  stat_slabh(aes(y = 0)) +
+  stat_pointintervalh(aes(y = -0.5), point_interval = median_qi, .width = c(.95, .80)) +
+  annotate("text", label = "median, 80% and 95% quantile intervals", x = 6, y = -0.5, hjust = 0, vjust = 0.3) +
+  stat_pointintervalh(aes(y = -0.25), point_interval = mode_hdi, .width = c(.95, .80)) +
+  annotate("text", label = "mode, 80% and 95% highest-density intervals", x = 6, y = -0.25, hjust = 0, vjust = 0.3) +
+  xlim(-3.25, 18) +
+  scale_y_continuous(breaks = NULL)
 
 ## -------------------------------------------------------------------------------------------------
 m %>% 
@@ -220,15 +218,14 @@ m %>%
   mutate(condition_offset = condition_mean - overall_mean) %>%
   median_qi(condition_offset)
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition], response_sd) %>%
   mutate(y_rep = rnorm(n(), condition_mean, response_sd)) %>%
-  ggplot(aes(x = y_rep)) +
-  stat_density(fill = "gray75") +
-  facet_grid(condition ~ ., switch = "y")
+  ggplot(aes(y = fct_rev(condition), x = y_rep)) +
+  stat_slabh()
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition], response_sd) %>%
   mutate(y_rep = rnorm(n(), condition_mean, response_sd)) %>%
@@ -238,7 +235,7 @@ m %>%
   geom_point(aes(x = response), data = ABC) +
   scale_color_brewer()
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.75-------------------------------------------------------------
 draws = m %>%
   spread_draws(condition_mean[condition], response_sd)
 
@@ -252,17 +249,17 @@ means = draws %>%
 ABC %>%
   ggplot(aes(y = condition)) +
   geom_intervalh(aes(x = y_rep), data = reps) +
-  geom_pointintervalh(aes(x = condition_mean), position = position_nudge(y = -0.2), data = means) +
+  geom_pointintervalh(aes(x = condition_mean), position = position_nudge(y = -0.3), data = means) +
   geom_point(aes(x = response)) +
   scale_color_brewer()
 
-## ---- fig.width=7---------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 2.5-------------------------------------------------------------
 #N.B. the syntax for compare_levels is experimental and may change
 m %>%
   spread_draws(condition_mean[condition]) %>%
   compare_levels(condition_mean, by = condition) %>%
   ggplot(aes(y = condition, x = condition_mean)) +
-  geom_halfeyeh()
+  stat_halfeyeh()
 
 ## -------------------------------------------------------------------------------------------------
 m %>%
@@ -292,7 +289,7 @@ m %>%
   spread_draws(`condition_.*`[condition], regex = TRUE) %>%
   head(10)
 
-## ---- results = "hide", message = FALSE, warning = FALSE------------------------------------------
+## ----m_mpg_brms, results = "hide", message = FALSE, warning = FALSE, cache = TRUE-----------------
 m_mpg = brm(mpg ~ hp * cyl, data = mtcars)
 
 ## -------------------------------------------------------------------------------------------------
@@ -317,34 +314,6 @@ mtcars %>%
   scale_color_brewer(palette = "Dark2")
 
 ## -------------------------------------------------------------------------------------------------
-set.seed(123456)
-ndraws = 50
-
-p = mtcars %>%
-  group_by(cyl) %>%
-  data_grid(hp = seq_range(hp, n = 101)) %>%
-  add_fitted_draws(m_mpg, n = ndraws) %>%
-  ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-  geom_line(aes(y = .value, group = paste(cyl, .draw))) +
-  geom_point(data = mtcars) +
-  scale_color_brewer(palette = "Dark2") +
-  transition_states(.draw, 0, 1) +
-  shadow_mark(future = TRUE, color = "gray50", alpha = 1/20)
-
-animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 384, res = 96, type = "cairo")
-
-## -------------------------------------------------------------------------------------------------
-mtcars %>%
-  group_by(cyl) %>%
-  data_grid(hp = seq_range(hp, n = 101)) %>%
-  add_predicted_draws(m_mpg) %>%
-  ggplot(aes(x = hp, y = mpg, color = ordered(cyl), fill = ordered(cyl))) +
-  stat_lineribbon(aes(y = .prediction), .width = c(.95, .80, .50), alpha = 1/4) +
-  geom_point(data = mtcars) +
-  scale_fill_brewer(palette = "Set2") +
-  scale_color_brewer(palette = "Dark2")
-
-## -------------------------------------------------------------------------------------------------
 m_linear = lm(response ~ condition, data = ABC)
 
 ## -------------------------------------------------------------------------------------------------
@@ -364,13 +333,13 @@ bayes_results = m %>%
 
 bayes_results
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5--------------------------------------------------------------
 bind_rows(linear_results, bayes_results) %>%
   mutate(condition = fct_rev(condition)) %>%
   ggplot(aes(y = condition, x = estimate, xmin = conf.low, xmax = conf.high, color = model)) +
-  geom_pointrangeh(position = position_dodgev(height = .3))
+  geom_pointintervalh(position = position_dodgev(height = .3))
 
-## ---- warning = FALSE-----------------------------------------------------------------------------
+## ---- warning = FALSE, fig.width = 4, fig.height = 2.5--------------------------------------------
 bind_rows(linear_results, bayes_results) %>%
   rename(term = condition) %>%
   dotwhisker::dwplot()
@@ -388,7 +357,7 @@ m %>%
   unspread_draws(condition_mean[condition]) %>%
   head(10)
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5--------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   compare_levels(condition_mean, by = condition) %>%
@@ -411,13 +380,13 @@ m_rst %>%
   gather_emmeans_draws() %>%
   median_qi()
 
-## -------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5--------------------------------------------------------------
 m_rst %>%
   emmeans( ~ condition) %>%
   contrast(method = "pairwise") %>%
   gather_emmeans_draws() %>%
   ggplot(aes(x = .value, y = contrast)) +
-  geom_halfeyeh()
+  stat_halfeyeh()
 
 ## -------------------------------------------------------------------------------------------------
 m_rst %>%

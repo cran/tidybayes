@@ -25,10 +25,15 @@ img {
 
 ```{r chunk_options, include=FALSE}
 knitr::opts_chunk$set(
-  fig.width = 6, 
-  fig.height = 4,
+  fig.width = 4.5,
+  fig.height = 3,
   eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
 )
+if (capabilities("cairo")) {
+  knitr::opts_chunk$set(
+    dev.args = list(png = list(type = "cairo"))
+  )
+}
 ```
 
 ## Introduction
@@ -46,13 +51,12 @@ library(purrr)
 library(tidyr)
 library(tidybayes)
 library(ggplot2)
-library(ggridges)
 library(cowplot)
 library(rstan)
 library(brms)
 library(gganimate)
 
-theme_set(theme_tidybayes() + panel_border() + background_grid())
+theme_set(theme_tidybayes() + panel_border())
 ```
 
 These options help Stan run faster:
@@ -125,10 +129,11 @@ A graphical depiction of the censoring process might be something like this:
 ```{r, fig.width = 1.75, fig.height = 5}
 uncensored_plot = cens_df %>%
   ggplot(aes(y = "", x = y_star)) +
-  geom_density_ridges(bandwidth = 0.5, scale = 1.5) +
+  stat_slabh() +
   geom_jitter(aes(y = 0.75, color = ordered(y_lower)), position = position_jitter(height = 0.2), show.legend = FALSE) +
   ylab(NULL) +
-  scale_x_continuous(breaks = -4:4, limits = c(-4, 4))
+  scale_x_continuous(breaks = -4:4, limits = c(-4, 4)) +
+  background_grid("x")
 
 censored_plot = cens_df %>%
   ggplot(aes(y = "", x = (y_lower + y_upper)/2)) +
@@ -144,7 +149,8 @@ censored_plot = cens_df %>%
   ) +
   ylab(NULL) +
   xlab("interval-censored y") +
-  scale_x_continuous(breaks = -4:4, limits = c(-4, 4))
+  scale_x_continuous(breaks = -4:4, limits = c(-4, 4)) +
+  background_grid("x")
 
 plot_grid(align = "v", ncol = 1, rel_heights = c(1, 2.5),
   uncensored_plot,
@@ -156,7 +162,7 @@ plot_grid(align = "v", ncol = 1, rel_heights = c(1, 2.5),
 
 Before we fit a model to the censored data, let's see what an ideal model looks like: we'll fit a model to `y_star`. With censored or discrete data in the real-world, we would not be able to fit such a model, because we would not have observations of `y_star`, only the intervals. But this might help us understand what we're looking for in a fit that's working.
 
-```{r}
+```{r m_ideal_brm, cache = TRUE}
 m_ideal = brm(y_star ~ 1, data = cens_df, family = student)
 ```
 
@@ -181,7 +187,7 @@ This is a typical residual plot, though with the addition of the uncertainty ass
 
 Let's check the QQ plot:
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 cens_df %>%
   add_residual_draws(m_ideal) %>%
   median_qi() %>%
@@ -207,7 +213,7 @@ $$
 z^{*\textrm{resid}}_i = F_{\textrm{Normal}}^{-1}(p^{*\textrm{resid}}_i)
 $$
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 cens_df %>%
   add_predicted_draws(m_ideal) %>%
   summarise(
@@ -225,7 +231,7 @@ This QQ plot shows us the model fits okay.
 
 Assuming a situation where we do not have access to the original (uncensored) data, we will perform a regression on the interval-censored data. In brms, we can do this by specifying the lower (`y_lower`) and upper (`y_upper`) bounds on each observation, and the censoring type (`censoring`), which in this case is `"interval"` for all observations.
 
-```{r}
+```{r m_brm, cache = TRUE}
 m = brm(y_lower | cens(censoring, y_upper) ~ 1, data = cens_df)
 ```
 
@@ -248,7 +254,7 @@ But notice the horizontal striations due to censoring. This obscures patterns we
 
 Let's look at the QQ plot:
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 cens_df %>%
   add_residual_draws(m) %>%
   median_qi(.residual) %>%
@@ -307,7 +313,7 @@ cens_df %>%
 
 The striations are gone! And a QQ plot:
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 cens_df %>%
   add_predicted_draws(m) %>%
   summarise(
@@ -323,7 +329,7 @@ cens_df %>%
 
 Looks decent. However, our residuals are now subject to noise---we actually have a distribution of possible QQ plots. So, let's check on some of them to make sure this nice-looking one is not just a fluke. We'll employ [HOPs](https://mucollective.co/project/hops-trends) to do that:
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 k = 20
 
 p = cens_df %>%
@@ -334,14 +340,14 @@ p = cens_df %>%
     p_residual = list(runif(k, p_lower, p_upper)),
     residual_draw = list(1:k)
   ) %>%
-  unnest() %>%
+  unnest(c(p_residual, residual_draw)) %>%
   mutate(z_residual = qnorm(p_residual)) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
   geom_abline() +
   transition_manual(residual_draw)
 
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
+animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
 ```
 
 Looks good.
@@ -368,10 +374,11 @@ Note the presence of outliers:
 ```{r, fig.width = 4, fig.height = 5.75}
 uncensored_plot = cens_df_t %>%
   ggplot(aes(y = "", x = y)) +
-  geom_density_ridges(bandwidth = 0.5, scale = 1.5) +
+  stat_slabh() +
   geom_jitter(aes(y = 0.75, color = ordered(y_lower)), position = position_jitter(height = 0.2), show.legend = FALSE) +
   ylab(NULL) +
-  scale_x_continuous(breaks = -10:10, limits = c(-10, 10))
+  scale_x_continuous(breaks = -10:10, limits = c(-10, 10)) +
+  background_grid("x")
 
 censored_plot = cens_df_t %>%
   ggplot(aes(y = "", x = (y_lower + y_upper)/2)) +
@@ -387,7 +394,8 @@ censored_plot = cens_df_t %>%
   ) +
   ylab(NULL) +
   xlab("interval-censored y") +
-  scale_x_continuous(breaks = -10:10, limits = c(-10, 10))
+  scale_x_continuous(breaks = -10:10, limits = c(-10, 10)) +
+  background_grid("x")
 
 plot_grid(align = "v", ncol = 1, rel_heights = c(1, 2.25),
   uncensored_plot,
@@ -399,13 +407,13 @@ plot_grid(align = "v", ncol = 1, rel_heights = c(1, 2.25),
 
 Now, fitting the same model as before:
 
-```{r}
+```{r m_t1_brm, cache = TRUE}
 m_t1 = brm(y_lower | cens(censoring, y_upper) ~ 1, data = cens_df_t)
 ```
 
 And checking the QQ plot:
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 cens_df_t %>%
   add_residual_draws(m_t1) %>%
   median_qi(.residual) %>%
@@ -420,7 +428,7 @@ It looks like this could be problematic, but the striations make diagnosing the 
 
 Let's try randomized quantile residuals again:
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 cens_df_t %>%
   add_predicted_draws(m_t1) %>%
   summarise(
@@ -434,42 +442,19 @@ cens_df_t %>%
   geom_abline()
 ```
 
-Does not look good for the model---this s-shape is characteristic of excess kurtosis (aka fat tails), which is exactly what a t distribution should produce. But let's check using HOPs again:
-
-```{r}
-k = 20
-
-p = cens_df_t %>%
-  add_predicted_draws(m_t1) %>%
-  summarise(
-    p_lower = mean(.prediction < y_lower),
-    p_upper = mean(.prediction < y_upper),
-    p_residual = list(runif(k, p_lower, p_upper)),
-    residual_draw = list(1:k)
-  ) %>%
-  unnest() %>%
-  mutate(z_residual = qnorm(p_residual)) %>%
-  ggplot(aes(sample = z_residual)) +
-  geom_qq() +
-  geom_abline() +
-  transition_manual(residual_draw)
-
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
-```
-
-Still not good! But the clear s shape is very diagnostic of fat tails, so let's try a different model.
+Does not look good for the model---this s-shape is characteristic of excess kurtosis (aka fat tails), which is exactly what a t distribution should produce. So let's try a different model.
 
 ## Robust interval-censored model
 
 A common model to try to "robustify" linear regression is to swap out the Normal response distribution for a Student's t distribution, which has fatter tails (it also happens that this is the distribution used to generate the data above, so I am clearly cheating, but also: *this had better work*).
 
-```{r}
+```{r m_t2_brm, cache = TRUE}
 m_t2 = brm(y_lower | cens(censoring, y_upper) ~ 1, data = cens_df_t, family = student)
 ```
 
 Let's look at the QQ plot of the residuals:
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 cens_df_t %>%
   add_residual_draws(m_t2) %>%
   median_qi(.residual) %>%
@@ -484,7 +469,7 @@ Odd, these don't look great! But again, these residuals are not to be trusted...
 
 Let's check out the randomized quantile residuals:
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 k = 20
 
 p = cens_df_t %>%
@@ -495,14 +480,14 @@ p = cens_df_t %>%
     p_residual = list(runif(k, p_lower, p_upper)),
     residual_draw = list(1:k)
   ) %>%
-  unnest() %>%
+  unnest(c(p_residual, residual_draw)) %>%
   mutate(z_residual = qnorm(p_residual)) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
   geom_abline() +
   transition_manual(residual_draw)
 
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
+animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
 ```
 
 Looking pretty good! As well they should, since this is the same model that generated the data.
@@ -520,7 +505,7 @@ cens_df_o = cens_df_t %>%
 
 Then we'll fit an ordinal regression model. We have to adjust the fit parameters a bit to get it to converge:
 
-```{r}
+```{r m_o_brm, cache = TRUE}
 m_o = brm(y_factor ~ 1, data = cens_df_o, family = cumulative, 
   prior = prior(normal(0, 10), class = Intercept), control = list(adapt_delta = 0.99))
 ```
@@ -565,7 +550,7 @@ Then we proceed as before:
 ```{r}
 cens_df_o %>%
   add_predicted_draws(m_o) %>%
-  mutate(.prediction = ordered(.prediction)) %>%
+  mutate(.prediction = ordered(levels(y_factor)[.prediction], levels = levels(y_factor))) %>%
   summarise(
     p_lower = mean(.prediction < y_factor),
     p_upper = mean(.prediction <= y_factor),
@@ -578,26 +563,26 @@ cens_df_o %>%
 
 Or in HOPs-QQ plot form:
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 k = 20
 
 p = cens_df_o %>%
   add_predicted_draws(m_o) %>%
-  mutate(.prediction = ordered(.prediction)) %>%
+  mutate(.prediction = ordered(levels(y_factor)[.prediction], levels = levels(y_factor))) %>%
   summarise(
     p_lower = mean(.prediction < y_factor),
     p_upper = mean(.prediction <= y_factor),
     p_residual = list(runif(k, p_lower, p_upper)),
     residual_draw = list(1:k)
   ) %>%
-  unnest() %>%
+  unnest(c(p_residual, residual_draw)) %>%
   mutate(z_residual = qnorm(p_residual)) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
   geom_abline() +
   transition_manual(residual_draw)
 
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
+animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
 ```
 
 It is not too surprising that the ordinal regression also works here, even though it is not the data generating model. Ordinal regressions are pretty robust.
@@ -636,7 +621,7 @@ make_probability_residuals = function(data, prediction, y, y_upper = NA, n = 1) 
       .p_residual = map2(.p_lower, .p_upper, runif, n = !!n),
       .residual_draw = map(.p_residual, seq_along)
     ) %>%
-    unnest(.p_residual, .residual_draw, .drop = FALSE) %>%
+    unnest(c(.p_residual, .residual_draw)) %>%
     mutate(.z_residual = qnorm(.p_residual))
 }
 ```
@@ -655,13 +640,13 @@ bin_df = tibble(
 
 A model for this might be the following:
 
-```{r}
+```{r m_bin_brm, cache = TRUE}
 m_bin = brm(y ~ 1, data = bin_df, family = bernoulli)
 ```
 
 Again, standard residuals are hard to interpret:
 
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 bin_df %>%
   add_residual_draws(m_bin) %>%
   median_qi() %>%
@@ -670,25 +655,9 @@ bin_df %>%
   geom_qq_line()
 ```
 
-Randomized quantile residuals help us see that the fit is probably reasonable:
+Randomized quantile residuals help us see that the fit is probably reasonable. In this case (just to switch it up), we'll look at the probability residuals instead, comparing them against a uniform distribution, like so:
 
-```{r}
-k = 20
-
-p = bin_df %>%
-  add_predicted_draws(m_bin) %>%
-  make_probability_residuals(.prediction, y, n = k) %>%
-  ggplot(aes(sample = .z_residual)) +
-  geom_qq() +
-  geom_abline() +
-  transition_manual(.residual_draw)
-
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
-```
-
-We could also look at the probability residuals instead, comparing them against a uniform distribution, like so:
-
-```{r}
+```{r, fig.width = 4, fig.height = 4}
 k = 20
 
 p = bin_df %>%
@@ -699,5 +668,5 @@ p = bin_df %>%
   geom_abline() +
   transition_manual(.residual_draw)
 
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
+animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
 ```

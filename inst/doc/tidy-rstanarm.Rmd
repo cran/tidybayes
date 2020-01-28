@@ -25,10 +25,15 @@ img {
 
 ```{r chunk_options, include=FALSE}
 knitr::opts_chunk$set(
-  fig.width = 6, 
-  fig.height = 4,
+  fig.width = 4.5,
+  fig.height = 3,
   eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
 )
+if (capabilities("cairo")) {
+  knitr::opts_chunk$set(
+    dev.args = list(png = list(type = "cairo"))
+  )
+}
 ```
 
 ## Introduction
@@ -50,14 +55,13 @@ library(modelr)
 library(tidybayes)
 library(ggplot2)
 library(ggstance)
-library(ggridges)
 library(rstan)
 library(rstanarm)
 library(cowplot)
 library(RColorBrewer)
 library(gganimate)
 
-theme_set(theme_tidybayes() + panel_border() + background_grid())
+theme_set(theme_tidybayes() + panel_border())
 ```
 
 These options help Stan run faster:
@@ -102,7 +106,7 @@ head(ABC, 10)
 
 This is a typical tidy format data frame: one observation per row. Graphically:
 
-```{r}
+```{r fig.width = 3, fig.height = 2.5}
 ABC %>%
   ggplot(aes(y = condition, x = response)) +
   geom_point()
@@ -292,14 +296,14 @@ m %>%
 
 ## Plotting points and intervals
 
-Plotting point summaries and with one interval is straightforward using the `ggplot2::geom_pointrange` or `ggstance::geom_pointrangeh` geoms:
+Plotting point summaries and with one interval is straightforward using the `geom_pointinterval` or `geom_pointintervalh` geoms:
 
-```{r}
+```{r fig.width = 4, fig.height = 2.5}
 m %>%
   spread_draws(`(Intercept)`, b[,group]) %>%
   median_qi(condition_mean = `(Intercept)` + b) %>%
   ggplot(aes(y = group, x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointrangeh()
+  geom_pointintervalh()
 ```
 
 
@@ -313,9 +317,9 @@ m %>%
   median_qi(condition_mean = `(Intercept)` + b, .width = c(.95, .8, .5))
 ```
 
-The results are in a tidy format: one row per group and uncertainty interval width (`.width`). This facilitates plotting. For example, assigning `-.width` to the `size` aesthetic will show all intervals, making thicker lines correspond to smaller intervals. The `geom_pointintervalh` geom, provided by tidybayes, is a shorthand for a `geom_pointrangeh` with `xmin`, `xmax`, and `size` set appropriately based on the `.lower`, `.upper`, and `.width` columns in the data to produce plots of points with multiple probability levels:
+The results are in a tidy format: one row per group and uncertainty interval width (`.width`). This facilitates plotting. For example, assigning `-.width` to the `size` aesthetic will show all intervals, making thicker lines correspond to smaller intervals. The `geom_pointintervalh` geom automatically sets the `xmin`, `xmax`, and `size` aesthetics appropriately based on the `.lower`, `.upper`, and `.width` columns in the data to produce plots of points with multiple probability levels:
 
-```{r}
+```{r fig.width = 4, fig.height = 2.5}
 m %>%
   spread_draws(`(Intercept)`, b[,group]) %>%
   median_qi(condition_mean = `(Intercept)` + b, .width = c(.95, .66)) %>%
@@ -326,15 +330,36 @@ m %>%
 
 ## Intervals with densities
 
-To see the density along with the intervals, we can use `geom_eyeh` (horizontal "eye plots", which combine intervals with violin plots), or `geom_halfeyeh` (horizontal interval + density plots):
+To see the density along with the intervals, we can use `stat_eyeh` (horizontal "eye plots", which combine intervals with violin plots), or `stat_halfeyeh` (horizontal interval + density plots):
 
-```{r}
+```{r fig.width = 4, fig.height = 2.5}
 m %>%
   spread_draws(`(Intercept)`, b[,group]) %>%
   mutate(condition_mean = `(Intercept)` + b) %>%
   ggplot(aes(y = group, x = condition_mean)) +
-  geom_halfeyeh() 
+  stat_halfeyeh() 
 ```
+
+Or say you want to annotate portions of the densities in color; the `fill` aesthetic can vary within a slab in all geoms and stats in the `geom_slabinterval()` family, including `stat_halfeyeh()`. For example, if you want to annotate a domain-specific region of practical equivalence (ROPE), you could do something like this:
+
+```{r fig.width = 4.75, fig.height = 2.5}
+m %>%
+  spread_draws(`(Intercept)`, b[,group]) %>%
+  mutate(condition_mean = `(Intercept)` + b) %>%
+  ggplot(aes(y = group, x = condition_mean, fill = stat(abs(x) < .8))) +
+  stat_halfeyeh() +
+  geom_vline(xintercept = c(-.8, .8), linetype = "dashed") +
+  scale_fill_manual(values = c("gray80", "skyblue"))
+```
+
+
+## Other visualizations of distributions: `stat_slabinterval`
+
+There are a variety of additional stats for visualizing distributions in the `geom_slabinterval()` family of stats and geoms:
+
+<img src="slabinterval_family.png" width="700" alt="The slabinterval family of geoms and stats" />
+
+See `vignette("slabinterval")` for an overview.
 
 
 ## Posterior fits
@@ -350,7 +375,7 @@ ABC %>%
 
 To plot this example, we'll also show the use of `stat_pointintervalh` instead of `geom_pointintervalh`, which summarizes draws into point summaries and intervals within ggplot:
 
-```{r}
+```{r fig.width = 3, fig.height = 2.5}
 ABC %>%
   data_grid(condition) %>%
   add_fitted_draws(m) %>%
@@ -361,17 +386,16 @@ ABC %>%
 
 ## Quantile dotplots
 
-Intervals are nice if the alpha level happens to line up with whatever decision you are trying to make, but getting a shape of the posterior is better (hence eye plots, above). On the other hand, making inferences from density plots is imprecise (estimating the area of one shape as a proportion of another is a hard perceptual task). Reasoning about probability in frequency formats is easier, motivating [quantile dotplots](https://github.com/mjskay/when-ish-is-my-bus/blob/master/quantile-dotplots.md), which also allow precise estimation of arbitrary intervals (down to the dot resolution of the plot, here 100):
+Intervals are nice if the alpha level happens to line up with whatever decision you are trying to make, but getting a shape of the posterior is better (hence eye plots, above). On the other hand, making inferences from density plots is imprecise (estimating the area of one shape as a proportion of another is a hard perceptual task). Reasoning about probability in frequency formats is easier, motivating [quantile dotplots](https://github.com/mjskay/when-ish-is-my-bus/blob/master/quantile-dotplots.md) ([Kay et al. 2016](https://doi.org/10.1145/2858036.2858558), [Fernandes et al. 2018](https://doi.org/10.1145/3173574.3173718)), which also allow precise estimation of arbitrary intervals (down to the dot resolution of the plot, 100 in the example below). 
 
-```{r}
+Within the slabinterval family of geoms in tidybayes is the `dots` and `dotsinterval` family, which automatically determine appropriate bin sizes for dotplots and can calculate quantiles from samples to construct quantile dotplots. `stat_dotsh()` is the horizontal variant designed for use on samples:
+
+```{r fig.width = 5, fig.height = 3.5}
 ABC %>%
   data_grid(condition) %>%
   add_fitted_draws(m) %>%
-  do(tibble(.value = quantile(.$.value, ppoints(100)))) %>%
-  ggplot(aes(x = .value)) +
-  geom_dotplot(binwidth = .04) +
-  facet_grid(fct_rev(condition) ~ .) +
-  scale_y_continuous(breaks = NULL)
+  ggplot(aes(x = .value, y = condition)) +
+  stat_dotsh(quantiles = 100)
 ```
 
 The idea is to get away from thinking about the posterior as indicating one canonical point or interval, but instead to represent it as (say) 100 approximately equally likely points.
@@ -381,19 +405,19 @@ The idea is to get away from thinking about the posterior as indicating one cano
 
 Where `add_fitted_draws` is analogous to `rstanarm::posterior_linpred`, `add_predicted_draws` is analogous to `rstanarm::posterior_predict`, giving draws from the posterior predictive distribution.
 
-Here is an example of posterior predictive distributions plotted using `ggridges::geom_density_ridges`:
+Here is an example of posterior predictive distributions plotted using `stat_slabh()`:
 
-```{r}
+```{r fig.width = 4, fig.height = 2.5}
 ABC %>%
   data_grid(condition) %>%
   add_predicted_draws(m) %>%
   ggplot(aes(x = .prediction, y = condition)) +
-  geom_density_ridges()
+  stat_slabh()
 ```
 
 We could also use `tidybayes::stat_intervalh` to plot predictive bands alongside the data:
 
-```{r}
+```{r fig.width = 4, fig.height = 2.5}
 ABC %>%
   data_grid(condition) %>%
   add_predicted_draws(m) %>%
@@ -405,7 +429,7 @@ ABC %>%
 
 Altogether, data, posterior predictions, and posterior distributions of the means:
 
-```{r}
+```{r fig.width = 4, fig.height = 2.75}
 grid = ABC %>%
   data_grid(condition)
 
@@ -418,7 +442,7 @@ preds = grid %>%
 ABC %>%
   ggplot(aes(y = condition, x = response)) +
   stat_intervalh(aes(x = .prediction), data = preds) +
-  stat_pointintervalh(aes(x = .value), data = fits, .width = c(.66, .95), position = position_nudge(y = -0.2)) +
+  stat_pointintervalh(aes(x = .value), data = fits, .width = c(.66, .95), position = position_nudge(y = -0.3)) +
   geom_point() +
   scale_color_brewer()
 ```
@@ -427,7 +451,7 @@ ABC %>%
 
 To demonstrate drawing fit curves with uncertainty, let's fit a slightly naive model to part of the `mtcars` dataset:
 
-```{r, results = "hide", message = FALSE, warning = FALSE}
+```{r m_mpg_stan_glm, results = "hide", message = FALSE, warning = FALSE, cache = TRUE}
 m_mpg = stan_glm(mpg ~ hp * cyl, data = mtcars)
 ```
 
@@ -462,7 +486,9 @@ Or we can create animated [hypothetical outcome plots (HOPs)](https://mucollecti
 
 ```{r}
 set.seed(123456)
-ndraws = 50
+# to keep the example small we use 20 frames, 
+# but something like 100 would be better
+ndraws = 20
 
 p = mtcars %>%
   group_by(cyl) %>%
@@ -475,7 +501,7 @@ p = mtcars %>%
   transition_states(.draw, 0, 1) +
   shadow_mark(future = TRUE, color = "gray50", alpha = 1/20)
 
-animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 384, res = 96, type = "cairo")
+animate(p, nframes = ndraws, fps = 2.5, width = 432, height = 288, res = 96, dev = "png", type = "cairo")
 ```
 
 Or, for posterior predictions (instead of fits), we can go back to probability bands:
@@ -512,20 +538,20 @@ mtcars %>%
 
 If we wish compare the means from each condition, `compare_levels` facilitates comparisons of the value of some variable across levels of a factor. By default it computes all pairwise differences. 
 
-Let's demonstrate `compare_levels` with another plotting geom, `geom_halfeyeh`, which gives horizontal "half-eye" plots, combining intervals with a density plot:
+Let's demonstrate `compare_levels` with another plotting geom, `stat_halfeyeh`, which gives horizontal "half-eye" plots, combining intervals with a density plot:
 
-```{r, fig.width=7}
+```{r, fig.width = 4, fig.height = 2.5}
 #N.B. the syntax for compare_levels is experimental and may change
 m %>%
   spread_draws(b[,,condition], sep = "[, :]") %>%
   compare_levels(b, by = condition) %>%
   ggplot(aes(y = condition, x = b)) +
-  geom_halfeyeh()
+  stat_halfeyeh()
 ```
 
 If you prefer "caterpillar" plots, ordered by something like the mean of the difference, you can reorder the factor before plotting:
 
-```{r, fig.width=7}
+```{r, fig.width = 4, fig.height = 2.5}
 #N.B. the syntax for compare_levels is experimental and may change
 m %>%
   spread_draws(b[,,condition], sep = "[, :]") %>%
@@ -533,7 +559,7 @@ m %>%
   ungroup() %>%
   mutate(condition = reorder(condition, b)) %>%
   ggplot(aes(y = condition, x = b)) +
-  geom_halfeyeh() +
+  stat_halfeyeh() +
   geom_vline(xintercept = 0, linetype = "dashed") 
 ```
 
@@ -544,16 +570,16 @@ m %>%
 
 Here's an ordinal model with a categorical predictor:
 
-```{r}
+```{r m_esoph_rs_stan_polr, cache = TRUE}
 data(esoph)
-m_esoph_rs = stan_polr(tobgp ~ agegp, data = esoph, prior = R2(0.25), prior_counts = dirichlet(1))
+m_esoph_rs = stan_polr(tobgp ~ agegp, data = esoph, prior = R2(0.25), prior_counts = rstanarm::dirichlet(1))
 ```
 
 The `rstanarm::posterior_linpred` function for ordinal regression models in rstanarm returns only the link-level prediction for each draw (in contrast to `brms::fitted.brmsfit`, which returns one prediction per category for ordinal models, see the ordinal regression examples in `vignette("tidy-brms")`). The philosophy of `tidybayes` is to tidy whatever format is output by a model, so in keeping with that philosophy, when applied to ordinal `rstanarm` models, `add_fitted_draws` just returns the link-level prediction (**Note**: setting `scale = "response"` for such models will not usually make sense). 
 
 For example, here is a plot of the link-level fit:
 
-```{r}
+```{r fig.width = 4, fig.height = 2.5}
 esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_rs, scale = "linear") %>%
@@ -610,7 +636,7 @@ thresholds[1,]$threshold
 
 We can combine those thresholds (the $\alpha_j$ values from the above formula) with the `.value` from `add_fitted_draws` ($\beta x$ from the above formula) to calculate per-category probabilities:
 
-```{r}
+```{r fig.width = 5, fig.height = 2.5}
 esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_rs, scale = "linear") %>%
@@ -621,7 +647,7 @@ esoph %>%
       plogis(lag(alpha, default = -Inf) - beta_x)
     )) %>%
   mutate(.category = list(levels(esoph$tobgp))) %>%
-  unnest() %>%
+  unnest(c(threshold, `P(Y = category)`, .category)) %>%
   ggplot(aes(x = agegp, y = `P(Y = category)`, color = .category)) +
   stat_pointinterval(position = position_dodge(width = .4)) +
   scale_size_continuous(guide = FALSE) +
@@ -630,8 +656,8 @@ esoph %>%
 
 It is hard to see the changes in categories in the above plot; let's try something that gives a better gist of the distribution within each year:
 
-```{r fig.height = 2.25, fig.width = 8}
-esoph %>%
+```{r fig.height = 2.25, fig.width = 7}
+esoph_plot = esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_rs, scale = "linear") %>%
   inner_join(thresholds, by = ".draw") %>%
@@ -641,16 +667,27 @@ esoph %>%
       plogis(lag(alpha, default = -Inf) - beta_x)
     )) %>%
   mutate(.category = list(levels(esoph$tobgp))) %>%
-  unnest() %>%
+  unnest(c(threshold, `P(Y = category)`, .category)) %>%
   ggplot(aes(x = `P(Y = category)`, y = .category)) +
-  stat_summaryh(fun.x = median, geom = "barh", fill = "gray75", width = 1, color = "white") +
-  stat_pointintervalh() +
   coord_cartesian(expand = FALSE) +
   facet_grid(. ~ agegp, switch = "x") +
   theme_classic() +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   ggtitle("P(tobacco consumption category | age group)") +
   xlab("age group")
+
+esoph_plot +
+  stat_summaryh(fun.x = median, geom = "barh", fill = "gray75", width = 1, color = "white") +
+  stat_pointintervalh() 
 ```
+
+The bars in this case might present a false sense of precision, so we could also try CCDF barplots instead:
+
+```{r fig.height = 2.25, fig.width = 7}
+esoph_plot +
+  stat_ccdfintervalh() +
+  expand_limits(x = 0) #ensure bars go to 0
+```
+
 
 This output should be very similar to the output from the corresponding `m_esoph_brm` model in `vignette("tidy-brms")` (modulo different priors), though it takes a bit more work to produce in `rstanarm` compared to `brms`.

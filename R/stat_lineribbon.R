@@ -4,47 +4,24 @@
 ###############################################################################
 
 
-# Names that should be suppressed from global variable check by codetools
-# Names used broadly should be put in _global_variables.R
-globalVariables(c("...width.."))
-
-
-#' Line + multiple probability ribbon stat for ggplot
+#' Line + multiple probability ribbon plots (ggplot stat)
 #'
-#' A combination of \code{\link{stat_summary}} and \code{\link{geom_lineribbon}} with sensible defaults.
-#' While \code{geom_lineribbon} is intended for use on data frames that have already been summarized using
-#' a \code{\link{point_interval}} function, \code{stat_lineribbon} is intended for use directly on data
-#' frames of draws, and will perform the summarization using a \code{\link{point_interval}} function.
+#' A combination of [stat_slabinterval()] and [geom_lineribbon()] with sensible defaults.
+#' While `geom_lineribbon` is intended for use on data frames that have already been summarized using
+#' a [point_interval()] function, `stat_lineribbon` is intended for use directly on data
+#' frames of draws, and will perform the summarization using a [point_interval()] function;
+#' `stat_dist_lineribbon` is intended for use on analytical distributions through the `dist`,
+#' `arg1`, ... `arg9`, and `args` aesthetics.
 #'
-#' @param mapping The aesthetic mapping, usually constructed with
-#' \code{\link{aes}} or \code{\link{aes_string}}. Only needs to be set at the
-#' layer level if you are overriding the plot defaults.
-#' @param data A layer specific dataset - only needed if you want to override
-#' the plot defaults.
+#' @inheritParams stat_interval
+#' @inheritParams stat_slabinterval
 #' @param geom Use to override the default connection between
-#' \code{geom_lineribbon} and \code{stat_lineribbon}.
-#' @param position The position adjustment to use for overlapping points on this layer.
-#' @param ...  Other arguments passed to \code{\link{layer}}. They may also be arguments to the paired geom.
-#' @param point_interval A function that when given a vector should
-#'   return a data frame with variables \code{y}, \code{ymin}, \code{ymax}, and \code{.width}; or
-#'   \code{x}, \code{xmin}, \code{xmax}, and \code{.width}. \strong{Either is acceptable}: output
-#'   will be converted into the \code{y}-based aesthetics. See the \code{point_interval} family of functions.
-#' @param fun.data Similar to \code{point_interval}, for compatibility with \code{stat_summary}.
-#'   Note: if the summary function is passed using \code{fun.data}, \code{x}-based aesthetics
-#'   are not converted to the correct form automatically.
-#' @param .width The \code{.width} argument passed to \code{point_interval}.
-#' @param .prob Deprecated. Use \code{.width} instead.
-#' @param fun.args Other optional arguments passed to \code{fun.data}.
-#' @param na.rm	If \code{FALSE}, the default, missing values are removed with a warning. If \code{TRUE}, missing
-#' values are silently removed.
-#' @param show.legend Should this layer be included in the legends? \code{NA}, the default, includes if any aesthetics
-#' are mapped. \code{FALSE} never includes, and \code{TRUE} always includes.
-#' @param inherit.aes If \code{FALSE}, overrides the default aesthetics, rather than combining with them. This is
-#' most useful for helper functions that define both data and aesthetics and shouldn't inherit behavior from the
-#' default plot specification, e.g. borders.
-#' @seealso See \code{\link{geom_lineribbon}} for the geom version, intended for use on points and intervals that have
-#' already been summarized using a \code{\link{point_interval}} function. See \code{\link{stat_pointinterval}} /
-#' \code{\link{stat_pointintervalh}} for a similar stat intended for point summaries and intervals.
+#' `geom_lineribbon` and `stat_lineribbon`.
+#' @param show.legend Should this layer be included in the legends? `NA`, the default, includes if any aesthetics
+#' are mapped. `FALSE` never includes, and `TRUE` always includes.
+#' @seealso See [geom_lineribbon()] for the geom version, intended for use on points and intervals that have
+#' already been summarized using a [point_interval()] function. See [stat_pointinterval()] /
+#' [stat_pointintervalh()] for a similar stat intended for point summaries and intervals.
 #' @examples
 #'
 #' library(dplyr)
@@ -57,64 +34,139 @@ globalVariables(c("...width.."))
 #'   stat_lineribbon() +
 #'   scale_fill_brewer()
 #'
+#' tibble(
+#'   x = 1:10,
+#'   sd = seq(1, 3, length.out = 10)
+#' ) %>%
+#'   ggplot(aes(x = x, dist = "norm", arg1 = x, arg2 = sd)) +
+#'   stat_dist_lineribbon() +
+#'   scale_fill_brewer()
+#'
 #' @export
-#' @export
-stat_lineribbon <- function(mapping = NULL, data = NULL,
-  geom = "lineribbon", position = "identity",
+stat_lineribbon = function(
+  mapping = NULL,
+  data = NULL,
+  geom = "lineribbon",
+  position = "identity",
   ...,
+
+  interval_function = NULL,
+  interval_args = list(),
   point_interval = median_qi,
-  fun.data = NULL,
-  .width = c(.5, .8, .95),
-  .prob,
-  fun.args = list(),
+  .width = c(.50, .80, .95),
   na.rm = FALSE,
+
   show.legend = NA,
-  inherit.aes = TRUE
+  inherit.aes = TRUE,
+
+  #deprecated arguments
+  .prob,
+  fun.data,
+  fun.args
 ) {
+  interval_function = .Deprecated_argument_alias(interval_function, fun.data)
+  interval_args = .Deprecated_argument_alias(interval_args, fun.args)
   .width = .Deprecated_argument_alias(.width, .prob)
 
-  # Probs are drawn on top of each other in order by geom_lineribbon, so we have to sort in decreasing order
-  # to make sure the largest interval is not drawn last (over-writing all other intervals)
-  .width %<>% sort()
-
-  fun.data = fun.data %||% vertical_aes(point_interval)
-
-  l = layer(
+  layer(
     data = data,
     mapping = mapping,
-    #we can re-use StatPointinterval internally because it does exactly the same thing
-    #we would have done for a StatLineribbon
-    stat = StatPointinterval,
+    stat = StatLineribbon,
     geom = geom,
     position = position,
     show.legend = show.legend,
     inherit.aes = inherit.aes,
     params = list(
-      fun.data = fun.data,
+      interval_function = interval_function,
+      interval_args = interval_args,
+      point_interval = point_interval,
       .width = .width,
-      fun.args = fun.args,
+      show_slab = FALSE,
       na.rm = na.rm,
       ...
     )
   )
-
-  #provide some default computed aesthetics
-  default_computed_aesthetics = aes(
-    group = stat(.width),
-    fill = forcats::fct_rev(ordered(stat(.width)))
-  )
-
-  compute_aesthetics = l$compute_aesthetics
-  l$compute_aesthetics = function(self, data, plot) {
-    apply_default_computed_aesthetics(self, plot, default_computed_aesthetics)
-    compute_aesthetics(data, plot)
-  }
-
-  map_statistic = l$map_statistic
-  l$map_statistic = function(self, data, plot) {
-    apply_default_computed_aesthetics(self, plot, default_computed_aesthetics)
-    map_statistic(data, plot)
-  }
-
-  l
 }
+
+StatLineribbon = ggproto("StatLineribbon", StatPointinterval,
+  default_aes = aes(
+    datatype = "interval",
+    group = stat(level),
+    fill = stat(level)
+  ),
+
+  default_params = defaults(list(
+    .width = c(.50, .80, .95)
+  ), StatPointinterval$default_params)
+)
+
+
+#' @rdname stat_lineribbon
+#' @export
+stat_dist_lineribbon = function(
+  mapping = NULL,
+  data = NULL,
+  geom = "lineribbon",
+  position = "identity",
+  ...,
+
+  n = 501,
+  .width = c(.50, .80, .95),
+
+  na.rm = FALSE,
+
+  show.legend = NA,
+  inherit.aes = TRUE
+) {
+  layer(
+    data = data,
+    mapping = mapping,
+    stat = StatDistLineribbon,
+    geom = geom,
+    position = position,
+
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+
+    params = list(
+      orientation = "vertical",
+
+      limits_function = dist_limits_function,
+      limits_args = list(),
+
+      slab_function = dist_slab_function,
+      slab_args = list(),
+      n = n,
+
+      interval_function = dist_interval_function,
+      interval_args = list(),
+      point_interval = NULL,
+      .width = .width,
+
+      show_slab = FALSE,
+      show_interval = TRUE,
+
+      na.rm = na.rm,
+      ...
+    )
+  )
+}
+
+StatDistLineribbon = ggproto("StatDistLineribbon", StatDistSlabinterval,
+  default_aes = defaults(aes(
+    datatype = "interval",
+    group = stat(level),
+    fill = stat(level)
+  ), StatDistSlabinterval$default_aes),
+
+  default_params = defaults(list(
+    show_slab = FALSE,
+    .width = c(.50, .80, .95)
+  ), StatDistSlabinterval$default_params),
+
+  group_by_dist = FALSE
+)
+# have to remove this here instead of in call to defaults()
+# because otherwise it stays in the list as a value = NULL
+# instead of being removed
+StatDistLineribbon$default_aes$size = NULL

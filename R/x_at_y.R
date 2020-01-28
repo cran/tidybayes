@@ -6,22 +6,22 @@
 
 #' Generate lookup vectors for composing nested indices
 #'
-#' Generates a lookup vector such that \code{x_at_y(x, y)[y] == x}. Particularly useful
-#' for generating lookup tables for nested indices in conjunction with \code{\link{compose_data}}.
+#' Generates a lookup vector such that `x_at_y(x, y)[y] == x`. Particularly useful
+#' for generating lookup tables for nested indices in conjunction with [compose_data()].
 #'
-#' \code{x_at_y(x, y)} returns a vector \code{k} such that \code{k[y] == x}. It also
-#' fills in missing values in \code{y}: if \code{y} is an integer, \code{k} will contain
-#' entries for all values from \code{1} to \code{max(y)}; if \code{y} is a factor,
-#' \code{k} will contain entries for all values from \code{1} to \code{nlevels(y)}.
-#' Missing values are replaced with \code{missing} (default \code{NA}).
+#' `x_at_y(x, y)` returns a vector `k` such that `k[y] == x`. It also
+#' fills in missing values in `y`: if `y` is an integer, `k` will contain
+#' entries for all values from `1` to `max(y)`; if `y` is a factor,
+#' `k` will contain entries for all values from `1` to `nlevels(y)`.
+#' Missing values are replaced with `missing` (default `NA`).
 #'
 #' @param x Values in the resulting lookup vector. There should be only
-#' one unique value of \code{x} for every corresponding value of \code{y}.
+#' one unique value of `x` for every corresponding value of `y`.
 #' @param y Keys in the resulting lookup vector. Should be factors or integers.
-#' @param missing Missing levels from \code{y} will be filled in with this value
-#' in the resulting lookup vector. Default \code{NA}.
+#' @param missing Missing levels from `y` will be filled in with this value
+#' in the resulting lookup vector. Default `NA`.
 #' @author Matthew Kay
-#' @seealso \code{\link{compose_data}}.
+#' @seealso [compose_data()].
 #' @examples
 #'
 #' library(magrittr)
@@ -36,7 +36,8 @@
 #'   compose_data(site = x_at_y(site, plot))
 #'
 #' @importFrom rlang enquo quo_label is_integerish
-#' @importFrom dplyr tibble group_by slice distinct left_join
+#' @importFrom dplyr group_by slice distinct left_join
+#' @importFrom tibble tibble
 #' @importFrom magrittr %$%
 #' @export
 x_at_y = function(x, y, missing = NA) {

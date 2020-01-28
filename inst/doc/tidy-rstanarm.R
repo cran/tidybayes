@@ -1,14 +1,19 @@
 params <-
 list(EVAL = TRUE)
 
-## ----chunk_options, include=FALSE----------------------------------------
+## ----chunk_options, include=FALSE-------------------------------------------------------------------------------------
 knitr::opts_chunk$set(
-  fig.width = 6, 
-  fig.height = 4,
+  fig.width = 4.5,
+  fig.height = 3,
   eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
 )
+if (capabilities("cairo")) {
+  knitr::opts_chunk$set(
+    dev.args = list(png = list(type = "cairo"))
+  )
+}
 
-## ----setup, message = FALSE, warning = FALSE-----------------------------
+## ----setup, message = FALSE, warning = FALSE--------------------------------------------------------------------------
 library(magrittr)
 library(dplyr)
 library(forcats)
@@ -18,16 +23,15 @@ library(modelr)
 library(tidybayes)
 library(ggplot2)
 library(ggstance)
-library(ggridges)
 library(rstan)
 library(rstanarm)
 library(cowplot)
 library(RColorBrewer)
 library(gganimate)
 
-theme_set(theme_tidybayes() + panel_border() + background_grid())
+theme_set(theme_tidybayes() + panel_border())
 
-## ---- eval=FALSE---------------------------------------------------------
+## ---- eval=FALSE------------------------------------------------------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
 #  options(mc.cores = parallel::detectCores())
 
@@ -54,7 +58,7 @@ ABC =
 ## ---------------------------------------------------------------------------------------------------------------------
 head(ABC, 10)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 3, fig.height = 2.5----------------------------------------------------------------------------------
 ABC %>%
   ggplot(aes(y = condition, x = response)) +
   geom_point()
@@ -144,31 +148,40 @@ m %>%
   spread_draws(`(Intercept)`, b[,group]) %>%
   median_qi(condition_mean = `(Intercept)` + b)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
 m %>%
   spread_draws(`(Intercept)`, b[,group]) %>%
   median_qi(condition_mean = `(Intercept)` + b) %>%
   ggplot(aes(y = group, x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointrangeh()
+  geom_pointintervalh()
 
 ## ---------------------------------------------------------------------------------------------------------------------
 m %>%
   spread_draws(`(Intercept)`, b[,group]) %>%
   median_qi(condition_mean = `(Intercept)` + b, .width = c(.95, .8, .5))
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
 m %>%
   spread_draws(`(Intercept)`, b[,group]) %>%
   median_qi(condition_mean = `(Intercept)` + b, .width = c(.95, .66)) %>%
   ggplot(aes(y = group, x = condition_mean)) +
   geom_pointintervalh() 
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
 m %>%
   spread_draws(`(Intercept)`, b[,group]) %>%
   mutate(condition_mean = `(Intercept)` + b) %>%
   ggplot(aes(y = group, x = condition_mean)) +
-  geom_halfeyeh() 
+  stat_halfeyeh() 
+
+## ----fig.width = 4.75, fig.height = 2.5-------------------------------------------------------------------------------
+m %>%
+  spread_draws(`(Intercept)`, b[,group]) %>%
+  mutate(condition_mean = `(Intercept)` + b) %>%
+  ggplot(aes(y = group, x = condition_mean, fill = stat(abs(x) < .8))) +
+  stat_halfeyeh() +
+  geom_vline(xintercept = c(-.8, .8), linetype = "dashed") +
+  scale_fill_manual(values = c("gray80", "skyblue"))
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ABC %>%
@@ -176,31 +189,28 @@ ABC %>%
   add_fitted_draws(m) %>%
   head(10)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 3, fig.height = 2.5----------------------------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_fitted_draws(m) %>%
   ggplot(aes(x = .value, y = condition)) +
   stat_pointintervalh(.width = c(.66, .95))
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 5, fig.height = 3.5----------------------------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_fitted_draws(m) %>%
-  do(tibble(.value = quantile(.$.value, ppoints(100)))) %>%
-  ggplot(aes(x = .value)) +
-  geom_dotplot(binwidth = .04) +
-  facet_grid(fct_rev(condition) ~ .) +
-  scale_y_continuous(breaks = NULL)
+  ggplot(aes(x = .value, y = condition)) +
+  stat_dotsh(quantiles = 100)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_predicted_draws(m) %>%
   ggplot(aes(x = .prediction, y = condition)) +
-  geom_density_ridges()
+  stat_slabh()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_predicted_draws(m) %>%
@@ -209,7 +219,7 @@ ABC %>%
   geom_point(aes(x = response), data = ABC) +
   scale_color_brewer()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.75---------------------------------------------------------------------------------
 grid = ABC %>%
   data_grid(condition)
 
@@ -222,11 +232,11 @@ preds = grid %>%
 ABC %>%
   ggplot(aes(y = condition, x = response)) +
   stat_intervalh(aes(x = .prediction), data = preds) +
-  stat_pointintervalh(aes(x = .value), data = fits, .width = c(.66, .95), position = position_nudge(y = -0.2)) +
+  stat_pointintervalh(aes(x = .value), data = fits, .width = c(.66, .95), position = position_nudge(y = -0.3)) +
   geom_point() +
   scale_color_brewer()
 
-## ---- results = "hide", message = FALSE, warning = FALSE--------------------------------------------------------------
+## ----m_mpg_stan_glm, results = "hide", message = FALSE, warning = FALSE, cache = TRUE---------------------------------
 m_mpg = stan_glm(mpg ~ hp * cyl, data = mtcars)
 
 ## ---------------------------------------------------------------------------------------------------------------------
@@ -252,7 +262,9 @@ mtcars %>%
 
 ## ---------------------------------------------------------------------------------------------------------------------
 set.seed(123456)
-ndraws = 50
+# to keep the example small we use 20 frames, 
+# but something like 100 would be better
+ndraws = 20
 
 p = mtcars %>%
   group_by(cyl) %>%
@@ -265,7 +277,7 @@ p = mtcars %>%
   transition_states(.draw, 0, 1) +
   shadow_mark(future = TRUE, color = "gray50", alpha = 1/20)
 
-animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 384, res = 96, type = "cairo")
+animate(p, nframes = ndraws, fps = 2.5, width = 432, height = 288, res = 96, dev = "png", type = "cairo")
 
 ## ---------------------------------------------------------------------------------------------------------------------
 mtcars %>%
@@ -289,15 +301,15 @@ mtcars %>%
   scale_fill_brewer() +
   facet_grid(. ~ cyl, space = "free_x", scales = "free_x")
 
-## ---- fig.width=7-----------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 2.5---------------------------------------------------------------------------------
 #N.B. the syntax for compare_levels is experimental and may change
 m %>%
   spread_draws(b[,,condition], sep = "[, :]") %>%
   compare_levels(b, by = condition) %>%
   ggplot(aes(y = condition, x = b)) +
-  geom_halfeyeh()
+  stat_halfeyeh()
 
-## ---- fig.width=7-----------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 2.5---------------------------------------------------------------------------------
 #N.B. the syntax for compare_levels is experimental and may change
 m %>%
   spread_draws(b[,,condition], sep = "[, :]") %>%
@@ -305,14 +317,14 @@ m %>%
   ungroup() %>%
   mutate(condition = reorder(condition, b)) %>%
   ggplot(aes(y = condition, x = b)) +
-  geom_halfeyeh() +
+  stat_halfeyeh() +
   geom_vline(xintercept = 0, linetype = "dashed") 
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----m_esoph_rs_stan_polr, cache = TRUE-------------------------------------------------------------------------------
 data(esoph)
-m_esoph_rs = stan_polr(tobgp ~ agegp, data = esoph, prior = R2(0.25), prior_counts = dirichlet(1))
+m_esoph_rs = stan_polr(tobgp ~ agegp, data = esoph, prior = R2(0.25), prior_counts = rstanarm::dirichlet(1))
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
 esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_rs, scale = "linear") %>%
@@ -336,7 +348,7 @@ head(thresholds, 10)
 ## ---------------------------------------------------------------------------------------------------------------------
 thresholds[1,]$threshold
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = 5, fig.height = 2.5----------------------------------------------------------------------------------
 esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_rs, scale = "linear") %>%
@@ -347,14 +359,14 @@ esoph %>%
       plogis(lag(alpha, default = -Inf) - beta_x)
     )) %>%
   mutate(.category = list(levels(esoph$tobgp))) %>%
-  unnest() %>%
+  unnest(c(threshold, `P(Y = category)`, .category)) %>%
   ggplot(aes(x = agegp, y = `P(Y = category)`, color = .category)) +
   stat_pointinterval(position = position_dodge(width = .4)) +
   scale_size_continuous(guide = FALSE) +
   scale_color_manual(values = brewer.pal(6, "Blues")[-c(1,2)]) 
 
-## ----fig.height = 2.25, fig.width = 8---------------------------------------------------------------------------------
-esoph %>%
+## ----fig.height = 2.25, fig.width = 7---------------------------------------------------------------------------------
+esoph_plot = esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_rs, scale = "linear") %>%
   inner_join(thresholds, by = ".draw") %>%
@@ -364,14 +376,21 @@ esoph %>%
       plogis(lag(alpha, default = -Inf) - beta_x)
     )) %>%
   mutate(.category = list(levels(esoph$tobgp))) %>%
-  unnest() %>%
+  unnest(c(threshold, `P(Y = category)`, .category)) %>%
   ggplot(aes(x = `P(Y = category)`, y = .category)) +
-  stat_summaryh(fun.x = median, geom = "barh", fill = "gray75", width = 1, color = "white") +
-  stat_pointintervalh() +
   coord_cartesian(expand = FALSE) +
   facet_grid(. ~ agegp, switch = "x") +
   theme_classic() +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   ggtitle("P(tobacco consumption category | age group)") +
   xlab("age group")
+
+esoph_plot +
+  stat_summaryh(fun.x = median, geom = "barh", fill = "gray75", width = 1, color = "white") +
+  stat_pointintervalh() 
+
+## ----fig.height = 2.25, fig.width = 7---------------------------------------------------------------------------------
+esoph_plot +
+  stat_ccdfintervalh() +
+  expand_limits(x = 0) #ensure bars go to 0
 

@@ -1,28 +1,32 @@
 params <-
 list(EVAL = TRUE)
 
-## ----chunk_options, include=FALSE----------------------------------------
+## ----chunk_options, include=FALSE-------------------------------------------------------------------------------------
 knitr::opts_chunk$set(
-  fig.width = 6, 
-  fig.height = 4,
+  fig.width = 4.5,
+  fig.height = 3,
   eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
 )
+if (capabilities("cairo")) {
+  knitr::opts_chunk$set(
+    dev.args = list(png = list(type = "cairo"))
+  )
+}
 
-## ----setup, message = FALSE, warning = FALSE-----------------------------
+## ----setup, message = FALSE, warning = FALSE--------------------------------------------------------------------------
 library(dplyr)
 library(purrr)
 library(tidyr)
 library(tidybayes)
 library(ggplot2)
-library(ggridges)
 library(cowplot)
 library(rstan)
 library(brms)
 library(gganimate)
 
-theme_set(theme_tidybayes() + panel_border() + background_grid())
+theme_set(theme_tidybayes() + panel_border())
 
-## ---- eval=FALSE---------------------------------------------------------
+## ---- eval=FALSE------------------------------------------------------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
 #  options(mc.cores = parallel::detectCores())
 
@@ -54,10 +58,11 @@ head(cens_df, 10)
 ## ---- fig.width = 1.75, fig.height = 5--------------------------------------------------------------------------------
 uncensored_plot = cens_df %>%
   ggplot(aes(y = "", x = y_star)) +
-  geom_density_ridges(bandwidth = 0.5, scale = 1.5) +
+  stat_slabh() +
   geom_jitter(aes(y = 0.75, color = ordered(y_lower)), position = position_jitter(height = 0.2), show.legend = FALSE) +
   ylab(NULL) +
-  scale_x_continuous(breaks = -4:4, limits = c(-4, 4))
+  scale_x_continuous(breaks = -4:4, limits = c(-4, 4)) +
+  background_grid("x")
 
 censored_plot = cens_df %>%
   ggplot(aes(y = "", x = (y_lower + y_upper)/2)) +
@@ -73,14 +78,15 @@ censored_plot = cens_df %>%
   ) +
   ylab(NULL) +
   xlab("interval-censored y") +
-  scale_x_continuous(breaks = -4:4, limits = c(-4, 4))
+  scale_x_continuous(breaks = -4:4, limits = c(-4, 4)) +
+  background_grid("x")
 
 plot_grid(align = "v", ncol = 1, rel_heights = c(1, 2.5),
   uncensored_plot,
   censored_plot
 )
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----m_ideal_brm, cache = TRUE----------------------------------------------------------------------------------------
 m_ideal = brm(y_star ~ 1, data = cens_df, family = student)
 
 ## ---------------------------------------------------------------------------------------------------------------------
@@ -92,7 +98,7 @@ cens_df %>%
   ggplot(aes(x = .row, y = .residual)) +
   stat_pointinterval()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m_ideal) %>%
   median_qi() %>%
@@ -100,7 +106,7 @@ cens_df %>%
   geom_qq() +
   geom_qq_line()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 cens_df %>%
   add_predicted_draws(m_ideal) %>%
   summarise(
@@ -111,7 +117,7 @@ cens_df %>%
   geom_qq() +
   geom_abline()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----m_brm, cache = TRUE----------------------------------------------------------------------------------------------
 m = brm(y_lower | cens(censoring, y_upper) ~ 1, data = cens_df)
 
 ## ---------------------------------------------------------------------------------------------------------------------
@@ -123,7 +129,7 @@ cens_df %>%
   ggplot(aes(x = .row, y = .residual)) +
   stat_pointinterval()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m) %>%
   median_qi(.residual) %>%
@@ -143,7 +149,7 @@ cens_df %>%
   ggplot(aes(x = .row, y = z_residual)) +
   geom_point()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 cens_df %>%
   add_predicted_draws(m) %>%
   summarise(
@@ -156,7 +162,7 @@ cens_df %>%
   geom_qq() +
   geom_abline()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 k = 20
 
 p = cens_df %>%
@@ -167,14 +173,14 @@ p = cens_df %>%
     p_residual = list(runif(k, p_lower, p_upper)),
     residual_draw = list(1:k)
   ) %>%
-  unnest() %>%
+  unnest(c(p_residual, residual_draw)) %>%
   mutate(z_residual = qnorm(p_residual)) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
   geom_abline() +
   transition_manual(residual_draw)
 
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
+animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
 
 ## ---------------------------------------------------------------------------------------------------------------------
 set.seed(41181)
@@ -191,10 +197,11 @@ cens_df_t =
 ## ---- fig.width = 4, fig.height = 5.75--------------------------------------------------------------------------------
 uncensored_plot = cens_df_t %>%
   ggplot(aes(y = "", x = y)) +
-  geom_density_ridges(bandwidth = 0.5, scale = 1.5) +
+  stat_slabh() +
   geom_jitter(aes(y = 0.75, color = ordered(y_lower)), position = position_jitter(height = 0.2), show.legend = FALSE) +
   ylab(NULL) +
-  scale_x_continuous(breaks = -10:10, limits = c(-10, 10))
+  scale_x_continuous(breaks = -10:10, limits = c(-10, 10)) +
+  background_grid("x")
 
 censored_plot = cens_df_t %>%
   ggplot(aes(y = "", x = (y_lower + y_upper)/2)) +
@@ -210,17 +217,18 @@ censored_plot = cens_df_t %>%
   ) +
   ylab(NULL) +
   xlab("interval-censored y") +
-  scale_x_continuous(breaks = -10:10, limits = c(-10, 10))
+  scale_x_continuous(breaks = -10:10, limits = c(-10, 10)) +
+  background_grid("x")
 
 plot_grid(align = "v", ncol = 1, rel_heights = c(1, 2.25),
   uncensored_plot,
   censored_plot
 )
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----m_t1_brm, cache = TRUE-------------------------------------------------------------------------------------------
 m_t1 = brm(y_lower | cens(censoring, y_upper) ~ 1, data = cens_df_t)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 cens_df_t %>%
   add_residual_draws(m_t1) %>%
   median_qi(.residual) %>%
@@ -228,7 +236,7 @@ cens_df_t %>%
   geom_qq() +
   geom_qq_line()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 cens_df_t %>%
   add_predicted_draws(m_t1) %>%
   summarise(
@@ -241,30 +249,10 @@ cens_df_t %>%
   geom_qq() +
   geom_abline()
 
-## ---------------------------------------------------------------------------------------------------------------------
-k = 20
-
-p = cens_df_t %>%
-  add_predicted_draws(m_t1) %>%
-  summarise(
-    p_lower = mean(.prediction < y_lower),
-    p_upper = mean(.prediction < y_upper),
-    p_residual = list(runif(k, p_lower, p_upper)),
-    residual_draw = list(1:k)
-  ) %>%
-  unnest() %>%
-  mutate(z_residual = qnorm(p_residual)) %>%
-  ggplot(aes(sample = z_residual)) +
-  geom_qq() +
-  geom_abline() +
-  transition_manual(residual_draw)
-
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
-
-## ---------------------------------------------------------------------------------------------------------------------
+## ----m_t2_brm, cache = TRUE-------------------------------------------------------------------------------------------
 m_t2 = brm(y_lower | cens(censoring, y_upper) ~ 1, data = cens_df_t, family = student)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 cens_df_t %>%
   add_residual_draws(m_t2) %>%
   median_qi(.residual) %>%
@@ -272,7 +260,7 @@ cens_df_t %>%
   geom_qq() +
   geom_qq_line()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 k = 20
 
 p = cens_df_t %>%
@@ -283,20 +271,20 @@ p = cens_df_t %>%
     p_residual = list(runif(k, p_lower, p_upper)),
     residual_draw = list(1:k)
   ) %>%
-  unnest() %>%
+  unnest(c(p_residual, residual_draw)) %>%
   mutate(z_residual = qnorm(p_residual)) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
   geom_abline() +
   transition_manual(residual_draw)
 
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
+animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
 
 ## ---------------------------------------------------------------------------------------------------------------------
 cens_df_o = cens_df_t %>%
   mutate(y_factor = ordered(y_lower))
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----m_o_brm, cache = TRUE--------------------------------------------------------------------------------------------
 m_o = brm(y_factor ~ 1, data = cens_df_o, family = cumulative, 
   prior = prior(normal(0, 10), class = Intercept), control = list(adapt_delta = 0.99))
 
@@ -311,7 +299,7 @@ cens_df_o %>%
 ## ---------------------------------------------------------------------------------------------------------------------
 cens_df_o %>%
   add_predicted_draws(m_o) %>%
-  mutate(.prediction = ordered(.prediction)) %>%
+  mutate(.prediction = ordered(levels(y_factor)[.prediction], levels = levels(y_factor))) %>%
   summarise(
     p_lower = mean(.prediction < y_factor),
     p_upper = mean(.prediction <= y_factor),
@@ -321,26 +309,26 @@ cens_df_o %>%
   ggplot(aes(x = .row, y = z_residual)) +
   geom_point()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 k = 20
 
 p = cens_df_o %>%
   add_predicted_draws(m_o) %>%
-  mutate(.prediction = ordered(.prediction)) %>%
+  mutate(.prediction = ordered(levels(y_factor)[.prediction], levels = levels(y_factor))) %>%
   summarise(
     p_lower = mean(.prediction < y_factor),
     p_upper = mean(.prediction <= y_factor),
     p_residual = list(runif(k, p_lower, p_upper)),
     residual_draw = list(1:k)
   ) %>%
-  unnest() %>%
+  unnest(c(p_residual, residual_draw)) %>%
   mutate(z_residual = qnorm(p_residual)) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
   geom_abline() +
   transition_manual(residual_draw)
 
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
+animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
 
 ## ---------------------------------------------------------------------------------------------------------------------
 library(rlang)
@@ -372,7 +360,7 @@ make_probability_residuals = function(data, prediction, y, y_upper = NA, n = 1) 
       .p_residual = map2(.p_lower, .p_upper, runif, n = !!n),
       .residual_draw = map(.p_residual, seq_along)
     ) %>%
-    unnest(.p_residual, .residual_draw, .drop = FALSE) %>%
+    unnest(c(.p_residual, .residual_draw)) %>%
     mutate(.z_residual = qnorm(.p_residual))
 }
 
@@ -383,10 +371,10 @@ bin_df = tibble(
   y = rbernoulli(100, .7)
 )
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----m_bin_brm, cache = TRUE------------------------------------------------------------------------------------------
 m_bin = brm(y ~ 1, data = bin_df, family = bernoulli)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 bin_df %>%
   add_residual_draws(m_bin) %>%
   median_qi() %>%
@@ -394,20 +382,7 @@ bin_df %>%
   geom_qq() +
   geom_qq_line()
 
-## ---------------------------------------------------------------------------------------------------------------------
-k = 20
-
-p = bin_df %>%
-  add_predicted_draws(m_bin) %>%
-  make_probability_residuals(.prediction, y, n = k) %>%
-  ggplot(aes(sample = .z_residual)) +
-  geom_qq() +
-  geom_abline() +
-  transition_manual(.residual_draw)
-
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
-
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
 k = 20
 
 p = bin_df %>%
@@ -418,5 +393,5 @@ p = bin_df %>%
   geom_abline() +
   transition_manual(.residual_draw)
 
-animate(p, nframes = k, width = 576, height = 384, res = 96, type = "cairo")
+animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
 
