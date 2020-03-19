@@ -266,7 +266,7 @@ data.frame(dist = "lnorm") %>% ggplot(aes(y = 1, dist = dist, arg1 = log(10), ar
   stat_dist_halfeyeh() +
   scale_x_log10(breaks = 10^seq(-5,7, by = 2))
 
-## ----stat_histintervalh, fig.width = 5, fig.height = 3----------------------------------------------------------------
+## ----stat_histintervalh, fig.width = 5.25, fig.height = 3-------------------------------------------------------------
 p = df %>%
   ggplot(aes(x = group, y = value)) +
   panel_border()
@@ -278,6 +278,14 @@ ph = df %>%
 plot_grid(ncol = 2, align = "hv",
   p + stat_histinterval() + labs(title = "stat_histinterval[h]", subtitle = "stat_histinterval()"),
   ph + stat_histintervalh() + labs(subtitle = "stat_histintervalh()")
+)
+
+## ----stat_histintervalh_outlines, fig.width = 5.25, fig.height = 3----------------------------------------------------
+plot_grid(ncol = 2, align = "hv",
+  ph + stat_histintervalh(slab_color = "gray45", outline_bars = FALSE) +
+    labs(title = "stat_histintervalh", subtitle = "outline_bars = FALSE (default)"),
+  ph + stat_histintervalh(slab_color = "gray45", outline_bars = TRUE) +
+    labs(subtitle = "outline_bars = TRUE")
 )
 
 ## ----cdfinterval_family, fig.width = 4.5, fig.height = 4.5------------------------------------------------------------

@@ -1,7 +1,7 @@
 Package: tidybayes
 Title: Tidy Data and 'Geoms' for Bayesian Models
-Version: 2.0.1
-Date: 2020-01-28
+Version: 2.0.2
+Date: 2020-03-18
 Authors@R: c(
         person("Matthew", "Kay", role = c("aut", "cre"), email = "mjskay@umich.edu"),
         person("Timothy", "Mastny", role = "ctb", email = "tim.mastny@gmail.com")
@@ -29,7 +29,7 @@ BugReports: https://github.com/mjskay/tidybayes/issues/new
 URL: http://mjskay.github.io/tidybayes,
         https://github.com/mjskay/tidybayes
 VignetteBuilder: knitr
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.0
 LazyData: true
 Encoding: UTF-8
 Collate: "tidybayes-package.R" "add_draws.R" "binning_methods.R"
@@ -52,8 +52,8 @@ Collate: "tidybayes-package.R" "add_draws.R" "binning_methods.R"
         "tidybayes-models.R" "ungather_draws.R" "unspread_draws.R"
         "util.R" "x_at_y.R"
 NeedsCompilation: no
-Packaged: 2020-01-28 14:35:53 UTC; matth
+Packaged: 2020-03-19 14:11:31 UTC; matth
 Author: Matthew Kay [aut, cre],
   Timothy Mastny [ctb]
 Repository: CRAN
-Date/Publication: 2020-01-28 21:20:02 UTC
+Date/Publication: 2020-03-19 15:10:02 UTC
