@@ -96,7 +96,7 @@ first apply \code{\link[=relevel]{relevel()}} to \code{by} to set the control
 library(dplyr)
 library(ggplot2)
 
-data(RankCorr, package = "tidybayes")
+data(RankCorr, package = "ggdist")
 
 # Let's do all pairwise comparisons of b[i,1]:
 RankCorr \%>\%
@@ -111,7 +111,7 @@ RankCorr \%>\%
   filter(j == 1) \%>\%
   compare_levels(b, by = i, comparison = control) \%>\%
   ggplot(aes(x = b, y = i)) +
-  stat_halfeyeh()
+  stat_halfeye()
 
 # Or let's plot comparisons of all levels of j within
 # all levels of i
@@ -120,7 +120,7 @@ RankCorr \%>\%
   group_by(i) \%>\%
   compare_levels(b, by = j) \%>\%
   ggplot(aes(x = b, y = j)) +
-  stat_halfeyeh() +
+  stat_halfeye() +
   facet_grid(cols = vars(i))
 
 }

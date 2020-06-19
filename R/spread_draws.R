@@ -8,36 +8,6 @@
 globalVariables(c(".."))
 
 
-# deprecated names for spread_draws --------------------------------------
-
-#' @rdname tidybayes-deprecated
-#' @format NULL
-#' @usage NULL
-#' @export
-extract_samples = function(...) {
-  .Deprecated("spread_draws", package = "tidybayes") # nocov
-  spread_draws(...)               # nocov
-}
-
-#' @rdname tidybayes-deprecated
-#' @format NULL
-#' @usage NULL
-#' @export
-tidy_samples = function(...) {
-  .Deprecated("spread_draws", package = "tidybayes") # nocov
-  spread_draws(...)              # nocov
-}
-
-#' @rdname tidybayes-deprecated
-#' @format NULL
-#' @usage NULL
-#' @export
-spread_samples = function(...) {
-  .Deprecated("spread_draws", package = "tidybayes") # nocov
-  spread_draws(...)              # nocov
-}
-
-
 # spread_draws ----------------------------------------------------------
 
 #' Extract draws of variables in a Bayesian model fit into a tidy data format
@@ -242,7 +212,7 @@ spread_samples = function(...) {
 #' library(dplyr)
 #' library(ggplot2)
 #'
-#' data(RankCorr, package = "tidybayes")
+#' data(RankCorr, package = "ggdist")
 #'
 #' RankCorr %>%
 #'   spread_draws(b[i, j])
@@ -593,28 +563,6 @@ printable_variable_names = function(variable_names) {
   }
 }
 
-# get all variable names from an expression
-# based on http://adv-r.had.co.nz/dsl.html
-all_names = function(x) {
-  if (is.atomic(x)) {
-    NULL
-  } else if (is.name(x)) {
-    name = as.character(x)
-    if (name == "") {
-      NULL
-    }
-    else {
-      name
-    }
-  } else if (is.call(x) || is.pairlist(x)) {
-    children = lapply(x[-1], all_names)
-    unique(unlist(children))
-  } else {
-    stop("Don't know how to handle type `", typeof(x), "`",
-      call. = FALSE)
-  }
-}
-
 # return TRUE if all elements of the provided list are identical
 all_elements_identical = function(.list) {
   if (length(.list) == 0) {
@@ -630,6 +578,7 @@ all_elements_identical = function(.list) {
 }
 
 # a faster version of abind::abind(..., along = 0)
+#' @importFrom rlang `%||%`
 abind0 = function(vectors) {
   if (!is.list(vectors)) {
     return(vectors)

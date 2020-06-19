@@ -14,31 +14,33 @@
 \alias{tidy_draws.MCMCglmm}
 \title{Get a sample of posterior draws from a model as a tibble}
 \usage{
-tidy_draws(model)
+tidy_draws(model, ...)
 
-\method{tidy_draws}{default}(model)
+\method{tidy_draws}{default}(model, ...)
 
-\method{tidy_draws}{data.frame}(model)
+\method{tidy_draws}{data.frame}(model, ...)
 
-\method{tidy_draws}{mcmc.list}(model)
+\method{tidy_draws}{mcmc.list}(model, ...)
 
-\method{tidy_draws}{stanfit}(model)
+\method{tidy_draws}{stanfit}(model, ...)
 
-\method{tidy_draws}{stanreg}(model)
+\method{tidy_draws}{stanreg}(model, ...)
 
-\method{tidy_draws}{runjags}(model)
+\method{tidy_draws}{runjags}(model, ...)
 
-\method{tidy_draws}{jagsUI}(model)
+\method{tidy_draws}{jagsUI}(model, ...)
 
-\method{tidy_draws}{brmsfit}(model)
+\method{tidy_draws}{brmsfit}(model, ...)
 
-\method{tidy_draws}{matrix}(model)
+\method{tidy_draws}{matrix}(model, ...)
 
-\method{tidy_draws}{MCMCglmm}(model)
+\method{tidy_draws}{MCMCglmm}(model, ...)
 }
 \arguments{
 \item{model}{A supported Bayesian model fit object. See \code{\link[=tidybayes-models]{tidybayes-models()}} for a list of supported
 models.}
+
+\item{...}{Further arguments passed to other methods (mostly unused).}
 }
 \value{
 A data frame (actually, a \link[tibble:tibble]{tibble}) with a \code{.chain} column,
@@ -59,8 +61,8 @@ function, provide support for extracting variable dimensions are so are often mo
 
 To provide support for new models in tidybayes,
 you must provide an implementation of this function \emph{or} an implementation
-of \code{\link[coda:as.mcmc.list]{coda::as.mcmc.list()}} (\code{tidy_draws} should work on any model
-with an implementation of \code{\link[coda:as.mcmc.list]{coda::as.mcmc.list()}})
+of \code{\link[coda:mcmc.list]{coda::as.mcmc.list()}} (\code{tidy_draws} should work on any model
+with an implementation of \code{\link[coda:mcmc.list]{coda::as.mcmc.list()}})
 
 \code{tidy_draws} can be applied to a data frame that is already a tidy-format data frame
 of draws, provided it has one row per draw. In other words, it can be applied to data frames

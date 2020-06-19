@@ -4,34 +4,6 @@
 ###############################################################################
 
 
-
-# deprecated names for [add_]fitted_draws -------------------------------
-
-#' @rdname tidybayes-deprecated
-#' @format NULL
-#' @usage NULL
-#' @export
-fitted_samples = function(model, newdata, ..., n = NULL) {
-  .Deprecated("fitted_draws", package = "tidybayes") # nocov
-  fitted_samples_(model, newdata,  ..., n = n)       # nocov
-}
-fitted_samples_ = function(model, newdata, var = "estimate", ..., n = NULL, category = "category") {
-  combine_chains_for_deprecated_(fitted_draws(                      # nocov
-    model, newdata, value = var, ..., n = n, category = category    # nocov
-  ))                                                                # nocov
-}
-
-#' @rdname tidybayes-deprecated
-#' @format NULL
-#' @usage NULL
-#' @export
-add_fitted_samples = function(newdata, model, ..., n = NULL) {
-  .Deprecated("add_fitted_draws", package = "tidybayes") # nocov
-  fitted_samples_(model, newdata, ..., n = n)            # nocov
-}
-
-
-
 # [add_]fitted_draws / linpred_draws aliases -------------------------------------------------
 
 #' @rdname add_predicted_draws
@@ -74,8 +46,17 @@ linpred_draws = function(model, newdata, value = ".value", ..., n = NULL, seed =
 #' @rdname add_predicted_draws
 #' @export
 fitted_draws.default = function(model, newdata, ...) {
+  model_class = class(model)
+
+  if (model_class %in% c("ulam", "quap", "map", "map2stan")) {
+    stop(
+      "Models of type ", deparse0(model_class), " are not supported by base tidybayes.\n",
+      "Install the `tidybayes.rethinking` package to enable support for these models:\n",
+      "  devtools::install_github('mjskay/tidybayes.rethinking')"
+    )
+  }
   stop(
-    "Models of type ", deparse0(class(model)), " are not currently supported by `fitted_draws`.\n",
+    "Models of type ", deparse0(model_class), " are not currently supported by `fitted_draws`.\n",
     "You might try using `add_draws()` for models that do not have explicit fit/prediction\n",
     "support; see help(\"add_draws\") for an example. See also help(\"tidybayes-models\") for\n",
     "more information on what functions are supported by what model types."
@@ -129,7 +110,7 @@ fitted_draws.brmsfit = function(model, newdata, value = ".value", ..., n = NULL,
 
   # get the names of distributional regression parameters to include
   dpars = if (is_true(dpar)) {
-    names(brms::parse_bf(model$formula)$dpar)
+    names(brms::brmsterms(model$formula)$dpar)
   } else if (is_false(dpar)) {
     NULL
   } else {

@@ -2,21 +2,34 @@ params <-
 list(EVAL = TRUE)
 
 ## ----chunk_options, include=FALSE-------------------------------------------------------------------------------------
+# if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
+tiny_width = small_width = med_width = 6.75
+tiny_height = small_height = med_height = 4.5
+large_width = 8; large_height = 5.25
+# } else {
+#   tiny_width = 3; tiny_height = 2.5
+#   small_width = 4.5; small_height = 3
+#   med_width = 5; med_height = 3.5
+#   large_width = 7; large_height = 4.5
+# }
+
 knitr::opts_chunk$set(
-  fig.width = 4.5,
-  fig.height = 3,
+  fig.width = small_width,
+  fig.height = small_height,
   eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
 )
-if (capabilities("cairo")) {
+if (capabilities("cairo") && Sys.info()[['sysname']] != "Darwin") {
   knitr::opts_chunk$set(
     dev.args = list(png = list(type = "cairo"))
   )
 }
+dir.create("models", showWarnings = FALSE)
 
 ## ----setup, message = FALSE, warning = FALSE--------------------------------------------------------------------------
 library(dplyr)
 library(purrr)
 library(tidyr)
+library(ggdist)
 library(tidybayes)
 library(ggplot2)
 library(cowplot)
@@ -55,10 +68,10 @@ cens_df =
 ## ---------------------------------------------------------------------------------------------------------------------
 head(cens_df, 10)
 
-## ---- fig.width = 1.75, fig.height = 5--------------------------------------------------------------------------------
+## ---- fig.width = large_height/2.8, fig.height = large_height---------------------------------------------------------
 uncensored_plot = cens_df %>%
   ggplot(aes(y = "", x = y_star)) +
-  stat_slabh() +
+  stat_slab() +
   geom_jitter(aes(y = 0.75, color = ordered(y_lower)), position = position_jitter(height = 0.2), show.legend = FALSE) +
   ylab(NULL) +
   scale_x_continuous(breaks = -4:4, limits = c(-4, 4)) +
@@ -87,7 +100,13 @@ plot_grid(align = "v", ncol = 1, rel_heights = c(1, 2.5),
 )
 
 ## ----m_ideal_brm, cache = TRUE----------------------------------------------------------------------------------------
-m_ideal = brm(y_star ~ 1, data = cens_df, family = student)
+m_ideal = brm(
+  y_star ~ 1, 
+  data = cens_df, 
+  family = student,
+  
+  file = "models/tidybayes-residuals_m_ideal.rds"  # cache model (can be removed)
+)
 
 ## ---------------------------------------------------------------------------------------------------------------------
 m_ideal
@@ -98,7 +117,7 @@ cens_df %>%
   ggplot(aes(x = .row, y = .residual)) +
   stat_pointinterval()
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m_ideal) %>%
   median_qi() %>%
@@ -106,7 +125,7 @@ cens_df %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 cens_df %>%
   add_predicted_draws(m_ideal) %>%
   summarise(
@@ -118,7 +137,12 @@ cens_df %>%
   geom_abline()
 
 ## ----m_brm, cache = TRUE----------------------------------------------------------------------------------------------
-m = brm(y_lower | cens(censoring, y_upper) ~ 1, data = cens_df)
+m = brm(
+  y_lower | cens(censoring, y_upper) ~ 1, 
+  data = cens_df,
+  
+  file = "models/tidybayes-residuals_m.rds"  # cache model (can be removed)
+)
 
 ## ---------------------------------------------------------------------------------------------------------------------
 m
@@ -129,7 +153,7 @@ cens_df %>%
   ggplot(aes(x = .row, y = .residual)) +
   stat_pointinterval()
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m) %>%
   median_qi(.residual) %>%
@@ -149,7 +173,7 @@ cens_df %>%
   ggplot(aes(x = .row, y = z_residual)) +
   geom_point()
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 cens_df %>%
   add_predicted_draws(m) %>%
   summarise(
@@ -162,7 +186,7 @@ cens_df %>%
   geom_qq() +
   geom_abline()
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 k = 20
 
 p = cens_df %>%
@@ -194,10 +218,10 @@ cens_df_t =
     censoring = "interval"
   )
 
-## ---- fig.width = 4, fig.height = 5.75--------------------------------------------------------------------------------
+## ---- fig.width = med_height, fig.height = med_width------------------------------------------------------------------
 uncensored_plot = cens_df_t %>%
   ggplot(aes(y = "", x = y)) +
-  stat_slabh() +
+  stat_slab() +
   geom_jitter(aes(y = 0.75, color = ordered(y_lower)), position = position_jitter(height = 0.2), show.legend = FALSE) +
   ylab(NULL) +
   scale_x_continuous(breaks = -10:10, limits = c(-10, 10)) +
@@ -226,9 +250,14 @@ plot_grid(align = "v", ncol = 1, rel_heights = c(1, 2.25),
 )
 
 ## ----m_t1_brm, cache = TRUE-------------------------------------------------------------------------------------------
-m_t1 = brm(y_lower | cens(censoring, y_upper) ~ 1, data = cens_df_t)
+m_t1 = brm(
+  y_lower | cens(censoring, y_upper) ~ 1,
+  data = cens_df_t,
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+  file = "models/tidybayes-residuals_m_t1"  # cache model (can be removed)
+)
+
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 cens_df_t %>%
   add_residual_draws(m_t1) %>%
   median_qi(.residual) %>%
@@ -236,7 +265,7 @@ cens_df_t %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 cens_df_t %>%
   add_predicted_draws(m_t1) %>%
   summarise(
@@ -250,9 +279,15 @@ cens_df_t %>%
   geom_abline()
 
 ## ----m_t2_brm, cache = TRUE-------------------------------------------------------------------------------------------
-m_t2 = brm(y_lower | cens(censoring, y_upper) ~ 1, data = cens_df_t, family = student)
+m_t2 = brm(
+  y_lower | cens(censoring, y_upper) ~ 1, 
+  data = cens_df_t,
+  family = student,
+  
+  file = "models/tidybayes-residuals_m_t2.rds"  # cache model (can be removed)
+)
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 cens_df_t %>%
   add_residual_draws(m_t2) %>%
   median_qi(.residual) %>%
@@ -260,7 +295,7 @@ cens_df_t %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 k = 20
 
 p = cens_df_t %>%
@@ -285,8 +320,15 @@ cens_df_o = cens_df_t %>%
   mutate(y_factor = ordered(y_lower))
 
 ## ----m_o_brm, cache = TRUE--------------------------------------------------------------------------------------------
-m_o = brm(y_factor ~ 1, data = cens_df_o, family = cumulative, 
-  prior = prior(normal(0, 10), class = Intercept), control = list(adapt_delta = 0.99))
+m_o = brm(
+  y_factor ~ 1, 
+  data = cens_df_o, 
+  family = cumulative, 
+  prior = prior(normal(0, 10), class = Intercept), 
+  control = list(adapt_delta = 0.99),
+  
+  file = "models/tidybayes-residuals_m_o.rds"  # cache model (can be removed)
+)
 
 ## ---- error = TRUE----------------------------------------------------------------------------------------------------
 cens_df_o %>%
@@ -309,7 +351,7 @@ cens_df_o %>%
   ggplot(aes(x = .row, y = z_residual)) +
   geom_point()
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 k = 20
 
 p = cens_df_o %>%
@@ -372,9 +414,15 @@ bin_df = tibble(
 )
 
 ## ----m_bin_brm, cache = TRUE------------------------------------------------------------------------------------------
-m_bin = brm(y ~ 1, data = bin_df, family = bernoulli)
+m_bin = brm(
+  y ~ 1, 
+  data = bin_df, 
+  family = bernoulli,
+  
+  file = "models/tidybayes-residuals_m_bin.rds"  # cache model (can be removed)
+)
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 bin_df %>%
   add_residual_draws(m_bin) %>%
   median_qi() %>%
@@ -382,7 +430,7 @@ bin_df %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = 4, fig.height = 4-----------------------------------------------------------------------------------
+## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
 k = 20
 
 p = bin_df %>%

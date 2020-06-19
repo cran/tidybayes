@@ -3,12 +3,20 @@
 # Author: mjskay
 ###############################################################################
 
+# Names that should be suppressed from global variable check by codetools
+# Names used broadly should be put in _global_variables.R
+globalVariables(c(".lower", ".upper", ".width"))
 
+
+# tidybayes-deprecated ----------------------------------------------------
 
 #' Deprecated functions, arguments, and column names in tidybayes
 #'
 #' Deprecated functions, arguments, and column names and their alternatives are listed below.
-#' Many of the deprecations are due to a naming scheme overhaul in tidybayes version 1.0.
+#' Many of the deprecations are due to a naming scheme overhaul in tidybayes version 1.0
+#' (see *Deprecated Functions* and *Deprecated Arguments and Column Names* below) or due to
+#' the deprecation of horizontal shortcut geoms and stats in tidybayes 2.1 (see
+#' *Deprecated Horizontal Shortcut Geoms and Stats*).
 #'
 #' @section Deprecated Functions:
 #'
@@ -19,7 +27,7 @@
 #' but may not set `.iteration`), so be careful when upgrading to new function names.
 #' See *Deprecated Arguments and Column Names*, below, for more information.
 #'
-#' Deprecated functions are:
+#' Deprecated functions include:
 #'
 #' \itemize{
 #'
@@ -68,10 +76,57 @@
 #'   \item `ggeye` is deprecated: for a package whose goal is flexible and customizable
 #'   visualization, monolithic functions are inflexible and do not sufficiently capitalize on users'
 #'   existing knowledge of ggplot; instead, I think it is more flexible to design geoms and stats
-#'   that can used within a complete ggplot workflow. [geom_eyeh()] offers a horizontal
+#'   that can used within a complete ggplot workflow. [stat_eye()] offers a horizontal
 #'   eye plot geom that can be used instead of `ggeye`.
 #'
+#'   \item See the sections below for additional deprecated functions, including
+#'   horizontal geoms, stats, and point_intervals
+#'
 #' }
+#'
+#' @section Deprecated Eye Geom Spellings:
+#'
+#' `geom_eye`, `geom_eyeh`, and `geom_halfeyeh` are deprecated spellings of [stat_eye()] and
+#' [stat_halfeye()] from before name standardization of stats and geoms. Use those functions instead.
+#'
+#' @section Deprecated Horizontal Shortcut Geoms and Stats:
+#'
+#' Due to the introduction of automatic orientation detection in tidybayes 2.1,
+#' shortcut geoms and stats (which end in `h`) are no longer necessary, and are
+#' deprecated. In most cases, these can simply be replaced with the same
+#' geom without the `h` suffix and they will remain horizontal; e.g.
+#' `stat_halfeyeh(...)` can simply be replaced with `stat_halfeye(...)`.
+#' If automatic orientation detection fails, override it with the `orientation`
+#' parameter; e.g. `stat_halfeye(orientation = "horizontal")`.
+#'
+#' These deprecated stats and geoms include:
+#'
+#' - `stat_eyeh` / `stat_dist_eyeh`
+#' - `stat_halfeyeh` / `stat_dist_halfeyeh`
+#' - `geom_slabh` / `stat_slabh` / `stat_dist_slabh`
+#' - `geom_intervalh` / `stat_intervalh` / `stat_dist_intervalh`
+#' - `geom_pointintervalh` / `stat_pointintervalh` / `stat_dist_pointintervalh`
+#' - `stat_gradientintervalh` / `stat_dist_gradientintervalh`
+#' - `stat_cdfintervalh` / `stat_dist_cdfintervalh`
+#' - `stat_ccdfintervalh` / `stat_dist_ccdfintervalh`
+#' - `geom_dotsh` / `stat_dotsh` / `stat_dist_dotsh`
+#' - `geom_dotsintervalh` / `stat_intervalh` / `stat_dist_intervalh`
+#' - `stat_histintervalh`
+#'
+#' @section Deprecated Horizontal Point/Interval Functions:
+#'
+#' These functions ending in `h` (e.g., `point_intervalh`, `median_qih`)
+#' used to be needed for use with `ggstance::stat_summaryh`, but are
+#' no longer necessary because `ggplot2::stat_summary()` supports
+#' automatic orientation detection, so they have been deprecated.
+#' They behave identically to the corresponding function without the `h`,
+#' except that when passed a vector, they return a data frame with
+#' `x`/`xmin`/`xmax` instead of `y`/`ymin`/`ymax`.
+#'
+#' - `point_intervalh`
+#' - `mean_qih` / `median_qih` / `mode_qih`
+#' - `mean_hdih` / `median_hdih` / `mode_hdih`
+#' - `mean_hdcih` / `median_hdcih` / `mode_hdcih`
 #'
 #' @section Deprecated Arguments and Column Names:
 #'
@@ -117,3 +172,777 @@ ggeye = function(data = NULL, mapping = NULL, ...) {
   .Deprecated("geom_eyeh", package = "tidybayes")
   ggplot(data = data, mapping = mapping) + geom_eye(...) + coord_flip()
 }
+
+
+# [add_]fitted_draws aliases -------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+fitted_samples = function(model, newdata, ..., n = NULL) {
+  .Deprecated("fitted_draws", package = "tidybayes") # nocov
+  fitted_samples_(model, newdata,  ..., n = n)       # nocov
+}
+fitted_samples_ = function(model, newdata, var = "estimate", ..., n = NULL, category = "category") {
+  combine_chains_for_deprecated_(fitted_draws(                      # nocov
+    model, newdata, value = var, ..., n = n, category = category    # nocov
+  ))                                                                # nocov
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+add_fitted_samples = function(newdata, model, ..., n = NULL) {
+  .Deprecated("add_fitted_draws", package = "tidybayes") # nocov
+  fitted_samples_(model, newdata, ..., n = n)            # nocov
+}
+
+
+# [add_]predicted_draws aliases ----------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+predicted_samples = function(model, newdata, ..., n = NULL) {
+  .Deprecated("predicted_draws", package = "tidybayes") # nocov
+  predicted_samples_(model, newdata, ..., n = n) # nocov
+}
+predicted_samples_ = function(model, newdata, var = "pred", ..., n = NULL) {
+  combine_chains_for_deprecated_(predicted_draws( # nocov
+    model, newdata, prediction = var, ..., n = n  # nocov
+  ))                                              # nocov
+}
+
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+add_predicted_samples = function(newdata, model, ..., n = NULL) {
+  .Deprecated("add_predicted_draws", package = "tidybayes") # nocov
+  predicted_samples_(model, newdata, ..., n = n)         # nocov
+}
+
+
+# gather_draws aliases --------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+gather_samples = function(...) {
+  .Deprecated("gather_draws", package = "tidybayes") # nocov
+  to_broom_names(gather_draws(...))  # nocov
+}
+
+
+# gather_emmeans_draws aliases -----------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+gather_lsmeans_samples = function(...) {
+  .Deprecated("gather_emmeans_draws", package = "tidybayes") # nocov
+  combine_chains_for_deprecated_(gather_emmeans_draws(..., value = "estimate")) # nocov
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+gather_emmeans_samples = function(...) {
+  .Deprecated("gather_emmeans_draws", package = "tidybayes") # nocov
+  combine_chains_for_deprecated_(gather_emmeans_draws(..., value = "estimate")) # nocov
+}
+
+
+# gather_variables aliases -----------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+gather_terms = function(...) {
+  .Deprecated("gather_variables", package = "tidybayes") # nocov
+  to_broom_names(gather_variables(...)) # nocov
+}
+
+
+# spread_draws aliases --------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+extract_samples = function(...) {
+  .Deprecated("spread_draws", package = "tidybayes") # nocov
+  spread_draws(...)               # nocov
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+tidy_samples = function(...) {
+  .Deprecated("spread_draws", package = "tidybayes") # nocov
+  spread_draws(...)              # nocov
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+spread_samples = function(...) {
+  .Deprecated("spread_draws", package = "tidybayes") # nocov
+  spread_draws(...)              # nocov
+}
+
+
+# tidy_draws aliases --------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+as_sample_tibble = function(...) {
+  .Deprecated("tidy_draws", package = "tidybayes") # nocov
+  tidy_draws(...)                                  # nocov
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+as_sample_data_frame = function(...) {
+  .Deprecated("tidy_draws", package = "tidybayes") # nocov
+  tidy_draws(...)                                  # nocov
+}
+
+
+# ungather_draws aliases --------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+ungather_samples = function(..., term = "term", estimate = "estimate", indices = c(".chain", ".iteration", ".draw")) {
+  .Deprecated("ungather_draws", package = "tidybayes") # nocov
+  ungather_draws(..., variable = term, value = estimate, draw_indices = indices)  # nocov
+}
+
+
+# unspread_draws alises --------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+unspread_samples = function(..., indices = c(".chain", ".iteration", ".draw")) {
+  .Deprecated("unspread_draws", package = "tidybayes") # nocov
+  unspread_draws(..., draw_indices = indices)               # nocov
+}
+
+
+# get_variables aliases --------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+parameters = function(model) {
+  .Deprecated("get_variables", package = "tidybayes") # nocov
+  get_variables(model)  # nocov
+}
+
+
+# eye geom aliases -------------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+geom_eye = function(
+  ...,
+  scale = 0.9,
+  .width = c(.66, .95),
+
+  #deprecated arguments
+  relative_scale,
+  .prob
+) {
+  .Deprecated("stat_eye", package = "tidybayes")
+  .width = .Deprecated_argument_alias(.width, .prob)
+  scale = .Deprecated_argument_alias(scale, relative_scale)
+
+  stat_eye(..., .width = .width, scale = scale)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+geom_eyeh = function(
+  ...,
+  scale = 0.9,
+  .width = c(.66, .95),
+
+  #deprecated arguments
+  relative_scale,
+  .prob
+) {
+  .Deprecated("stat_eye", package = "tidybayes")
+  .width = .Deprecated_argument_alias(.width, .prob)
+  scale = .Deprecated_argument_alias(scale, relative_scale)
+
+  stat_eye(..., .width = .width, scale = scale, orientation = "horizontal")
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+geom_halfeyeh = function(
+  ...,
+  scale = 0.9,
+  .width = c(.66, .95),
+
+  #deprecated arguments
+  relative_scale,
+  .prob
+) {
+  .Deprecated("stat_halfeye", package = "tidybayes")
+  .width = .Deprecated_argument_alias(.width, .prob)
+  scale = .Deprecated_argument_alias(scale, relative_scale)
+
+  stat_halfeye(..., .width = .width, scale = scale, orientation = "horizontal")
+}
+
+
+# horizontal geoms -----------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+geom_slabh = function(..., orientation = "horizontal") {
+  .Deprecated("geom_slab", package = "tidybayes")
+  geom_slab(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+geom_intervalh = function(
+  mapping = NULL,
+  data = NULL,
+  stat = "identity",
+  position = "identity",
+  ...,
+
+  side = "both",
+  orientation = "horizontal",
+  interval_size_range = c(1, 6),
+  show_slab = FALSE,
+  show_point = FALSE
+) {
+  .Deprecated("geom_interval", package = "tidybayes")
+
+  ggdist:::layer_geom_slabinterval(
+    data = data,
+    mapping = mapping,
+    default_mapping = aes(xmin = .lower, xmax = .upper, color = forcats::fct_rev(ordered(.width))),
+    stat = stat,
+    geom = GeomIntervalh,
+    position = position,
+    ...,
+
+    side = side,
+    orientation = orientation,
+    interval_size_range = interval_size_range,
+    show_slab = show_slab,
+    show_point = show_point,
+
+    datatype = "interval"
+  )
+}
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @importFrom plyr defaults
+#' @export
+GeomIntervalh = ggproto("GeomIntervalh", ggdist::GeomSlabinterval,
+  default_aes = defaults(aes(
+    datatype = "interval"
+  ), ggdist::GeomSlabinterval$default_aes),
+
+  default_key_aes = defaults(aes(
+    size = 4,
+    fill = NA
+  ), ggdist::GeomSlabinterval$default_key_aes),
+
+  default_params = defaults(list(
+    side = "both",
+    orientation = "horizontal",
+    interval_size_range = c(1, 6),
+    show_slab = FALSE,
+    show_point = FALSE
+  ), ggdist::GeomSlabinterval$default_params),
+
+  default_datatype = "interval"
+)
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+geom_pointintervalh = function(
+  mapping = NULL,
+  data = NULL,
+  stat = "identity",
+  position = "identity",
+  ...,
+
+  side = "both",
+  orientation = "horizontal",
+  show_slab = FALSE,
+
+  show.legend = c(size = FALSE)
+) {
+  .Deprecated("geom_pointinterval", package = "tidybayes")
+
+  ggdist:::layer_geom_slabinterval(
+    data = data,
+    mapping = mapping,
+    default_mapping = aes(xmin = .lower, xmax = .upper, size = -.width),
+    stat = stat,
+    geom = GeomPointintervalh,
+    position = position,
+    ...,
+
+    side = side,
+    orientation = orientation,
+    show_slab = show_slab,
+
+    datatype = "interval",
+
+    show.legend = show.legend
+  )
+}
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @import ggplot2
+#' @export
+GeomPointintervalh = ggproto("GeomPointintervalh", ggdist::GeomSlabinterval,
+  default_aes = defaults(aes(
+    datatype = "interval"
+  ), ggdist::GeomSlabinterval$default_aes),
+
+  default_key_aes = defaults(aes(
+    fill = NA
+  ), ggdist::GeomSlabinterval$default_key_aes),
+
+  default_params = defaults(list(
+    side = "both",
+    orientation = "horizontal",
+    show_slab = FALSE
+  ), ggdist::GeomSlabinterval$default_params),
+
+  default_datatype = "interval"
+)
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+geom_dotsh = function(..., orientation = "horizontal") {
+  .Deprecated("geom_dots", package = "tidybayes")
+  geom_dots(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+geom_dotsintervalh = function(..., orientation = "horizontal") {
+  .Deprecated("geom_dotsinterval", package = "tidybayes")
+  geom_dotsinterval(..., orientation = orientation)
+}
+
+# horizontal stat_dists ----------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dist_eyeh = function(..., side = "both", orientation = "horizontal") {
+  .Deprecated("stat_dist_eye", package = "tidybayes")
+  stat_dist_slabinterval(..., side = side, orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dist_halfeyeh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_dist_halfeye", package = "tidybayes")
+  stat_dist_slabinterval(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dist_slabh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_dist_slab", package = "tidybayes")
+  stat_dist_slab(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dist_intervalh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_dist_interval", package = "tidybayes")
+  stat_dist_interval(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dist_pointintervalh = function(..., show_slab = FALSE, orientation = "horizontal") {
+  .Deprecated("stat_dist_pointinterval", package = "tidybayes")
+  stat_dist_slabinterval(..., show_slab = show_slab, orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dist_gradientintervalh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_dist_gradientinterval", package = "tidybayes")
+  stat_dist_gradientinterval(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dist_cdfintervalh = function(...,
+  slab_type = "cdf", justification = 0.5, side = "topleft", orientation = "horizontal", normalize = "none"
+) {
+  .Deprecated("stat_dist_cdfinterval", package = "tidybayes")
+  stat_dist_slabinterval(...,
+    slab_type = slab_type, justification = justification, side = side, orientation = orientation, normalize = normalize
+  )
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dist_ccdfintervalh = function(...,
+  slab_type = "ccdf", justification = 0.5, side = "topleft", orientation = "horizontal", normalize = "none"
+) {
+  .Deprecated("stat_dist_ccdfinterval", package = "tidybayes")
+  stat_dist_slabinterval(...,
+    slab_type = slab_type, justification = justification, side = side, orientation = orientation, normalize = normalize
+  )
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dist_dotsh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_dist_dots", package = "tidybayes")
+  stat_dist_dots(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dist_dotsintervalh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_dist_dotsinterval", package = "tidybayes")
+  stat_dist_dotsinterval(..., orientation = orientation)
+}
+
+
+# horizontal stats ---------------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_eyeh = function(..., side = "both", orientation = "horizontal") {
+  .Deprecated("stat_eye", package = "tidybayes")
+  stat_sample_slabinterval(..., side = side, orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_halfeyeh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_halfeye", package = "tidybayes")
+  stat_sample_slabinterval(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_slabh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_slab", package = "tidybayes")
+  stat_slab(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_intervalh = function(
+  mapping = NULL,
+  data = NULL,
+  geom = "interval",
+  position = "identity",
+  ...,
+
+  orientation = "horizontal",
+  interval_function = NULL,
+  interval_args = list(),
+  point_interval = median_qi,
+  .width = c(.50, .80, .95),
+  show_point = FALSE,
+  show_slab = FALSE,
+  na.rm = FALSE,
+
+  show.legend = NA,
+  inherit.aes = TRUE,
+
+  #deprecated arguments
+  .prob,
+  fun.data,
+  fun.args
+) {
+  .Deprecated("stat_interval", package = "tidybayes")
+  interval_function = .Deprecated_argument_alias(interval_function, fun.data)
+  interval_args = .Deprecated_argument_alias(interval_args, fun.args)
+  .width = .Deprecated_argument_alias(.width, .prob)
+
+  layer(
+    data = data,
+    mapping = mapping,
+    stat = StatIntervalh,
+    geom = geom,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      orientation = orientation,
+      interval_function = interval_function,
+      interval_args = interval_args,
+      point_interval = point_interval,
+      .width = .width,
+      show_point = show_point,
+      show_slab = show_slab,
+      na.rm = na.rm,
+      ...
+    )
+  )
+}
+StatIntervalh = ggproto("StatIntervalh", ggdist::StatInterval,
+  default_params = defaults(list(
+    orientation = "horizontal"
+  ), ggdist::StatInterval$default_params)
+)
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_pointintervalh = function(
+  mapping = NULL,
+  data = NULL,
+  geom = "pointintervalh",
+  position = "identity",
+  ...,
+
+  orientation = "horizontal",
+  interval_function = NULL,
+  interval_args = list(),
+  point_interval = median_qi,
+  .width = c(.66, .95),
+  show_slab = FALSE,
+  na.rm = FALSE,
+
+  show.legend = c(size = FALSE),
+  inherit.aes = TRUE,
+
+  #deprecated arguments
+  .prob,
+  fun.data,
+  fun.args
+) {
+  .Deprecated("stat_pointinterval", package = "tidybayes")
+  interval_function = .Deprecated_argument_alias(interval_function, fun.data)
+  interval_args = .Deprecated_argument_alias(interval_args, fun.args)
+  .width = .Deprecated_argument_alias(.width, .prob)
+
+  layer(
+    data = data,
+    mapping = mapping,
+    stat = StatPointintervalh,
+    geom = geom,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      orientation = orientation,
+      interval_function = interval_function,
+      interval_args = interval_args,
+      point_interval = point_interval,
+      .width = .width,
+      show_slab = show_slab,
+      na.rm = na.rm,
+      ...
+    )
+  )
+}
+StatPointintervalh = ggproto("StatPointintervalh", ggdist::StatPointinterval,
+  default_params = defaults(list(
+    orientation = "horizontal"
+  ), ggdist::StatPointinterval$default_params)
+)
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_gradientintervalh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_gradientinterval", package = "tidybayes")
+  stat_gradientinterval(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_cdfintervalh = function(...,
+  slab_type = "cdf", justification = 0.5, side = "topleft", orientation = "horizontal", normalize = "none"
+) {
+  .Deprecated("stat_cdfinterval", package = "tidybayes")
+  stat_sample_slabinterval(...,
+    slab_type = slab_type, justification = justification, side = side, orientation = orientation, normalize = normalize
+  )
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_ccdfintervalh = function(...,
+  slab_type = "ccdf", justification = 0.5, side = "topleft", orientation = "horizontal", normalize = "none"
+) {
+  .Deprecated("stat_ccdfinterval", package = "tidybayes")
+  stat_sample_slabinterval(...,
+    slab_type = slab_type, justification = justification, side = side, orientation = orientation, normalize = normalize
+  )
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dotsh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_dots", package = "tidybayes")
+  stat_dots(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_dotsintervalh = function(..., orientation = "horizontal") {
+  .Deprecated("stat_dotsinterval", package = "tidybayes")
+  stat_dotsinterval(..., orientation = orientation)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+stat_histintervalh = function(..., slab_type = "histogram" , orientation = "horizontal") {
+  .Deprecated("stat_dotsinterval", package = "tidybayes")
+  stat_sample_slabinterval(..., slab_type = slab_type, orientation = orientation)
+}
+
+
+# horizontal point_intervals ----------------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+point_intervalh = flip_aes(point_interval)
+
+#' @export
+#' @format NULL
+#' @usage NULL
+#' @rdname tidybayes-deprecated
+mean_qih = flip_aes(mean_qi)
+
+#' @export
+#' @format NULL
+#' @usage NULL
+#' @rdname tidybayes-deprecated
+median_qih = flip_aes(median_qi)
+
+#' @export
+#' @format NULL
+#' @usage NULL
+#' @rdname tidybayes-deprecated
+mode_qih = flip_aes(mode_qi)
+
+#' @export
+#' @format NULL
+#' @usage NULL
+#' @rdname tidybayes-deprecated
+mean_hdih = flip_aes(mean_hdi)
+
+#' @export
+#' @format NULL
+#' @usage NULL
+#' @rdname tidybayes-deprecated
+median_hdih = flip_aes(median_hdi)
+
+#' @export
+#' @format NULL
+#' @usage NULL
+#' @rdname tidybayes-deprecated
+mode_hdih = flip_aes(mode_hdi)
+
+#' @export
+#' @format NULL
+#' @usage NULL
+#' @rdname tidybayes-deprecated
+mean_hdcih = flip_aes(mean_hdci)
+
+#' @export
+#' @format NULL
+#' @usage NULL
+#' @rdname tidybayes-deprecated
+median_hdcih = flip_aes(median_hdci)
+
+#' @export
+#' @format NULL
+#' @usage NULL
+#' @rdname tidybayes-deprecated
+mode_hdcih = flip_aes(mode_hdci)

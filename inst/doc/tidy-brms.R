@@ -1,28 +1,40 @@
 params <-
 list(EVAL = TRUE)
 
-## ----chunk_options, include=FALSE-------------------------------------------------------------------------------------
+## ----chunk_options, include=FALSE---------------------------------------------
+# if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
+tiny_width = small_width = med_width = 6.75
+tiny_height = small_height = med_height = 4.5
+large_width = 8; large_height = 5.25
+# } else {
+#   tiny_width = 3; tiny_height = 2.5
+#   small_width = 4.5; small_height = 3
+#   med_width = 5; med_height = 3.5
+#   large_width = 7; large_height = 4.5
+# }
+
 knitr::opts_chunk$set(
-  fig.width = 4.5,
-  fig.height = 3,
+  fig.width = small_width,
+  fig.height = small_height,
   eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
 )
-if (capabilities("cairo")) {
+if (capabilities("cairo") && Sys.info()[['sysname']] != "Darwin") {
   knitr::opts_chunk$set(
     dev.args = list(png = list(type = "cairo"))
   )
 }
+dir.create("models", showWarnings = FALSE)
 
-## ----setup, message = FALSE, warning = FALSE--------------------------------------------------------------------------
+## ----setup, message = FALSE, warning = FALSE----------------------------------
 library(magrittr)
 library(dplyr)
 library(purrr)
 library(forcats)
 library(tidyr)
 library(modelr)
+library(ggdist)
 library(tidybayes)
 library(ggplot2)
-library(ggstance)
 library(cowplot)
 library(rstan)
 library(brms)
@@ -32,7 +44,7 @@ library(gganimate)
 
 theme_set(theme_tidybayes() + panel_border())
 
-## ---- eval=FALSE------------------------------------------------------------------------------------------------------
+## ---- eval=FALSE--------------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
 #  options(mc.cores = parallel::detectCores())
 
@@ -59,18 +71,24 @@ ABC =
 ## ---------------------------------------------------------------------------------------------------------------------
 head(ABC, 10)
 
-## ----fig.width = 3, fig.height = 2.5----------------------------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 ABC %>%
   ggplot(aes(y = condition, x = response)) +
   geom_point()
 
 ## ----m_brm, cache = TRUE----------------------------------------------------------------------------------------------
-m = brm(response ~ (1|condition), data = ABC, control = list(adapt_delta = .99),
+m = brm(
+  response ~ (1|condition), 
+  data = ABC, 
   prior = c(
     prior(normal(0, 1), class = Intercept),
     prior(student_t(3, 0, 1), class = sd),
     prior(student_t(3, 0, 1), class = sigma)
-  ))
+  ),
+  control = list(adapt_delta = .99),
+  
+  file = "models/tidy-brms_m.rds" # cache model (can be removed)  
+)
 
 ## ---------------------------------------------------------------------------------------------------------------------
 m
@@ -140,38 +158,38 @@ m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   median_qi(condition_mean = b_Intercept + r_condition)
 
-## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   median_qi(condition_mean = b_Intercept + r_condition) %>%
   ggplot(aes(y = condition, x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointintervalh()
+  geom_pointinterval()
 
 ## ---------------------------------------------------------------------------------------------------------------------
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   median_qi(condition_mean = b_Intercept + r_condition, .width = c(.95, .8, .5))
 
-## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   median_qi(condition_mean = b_Intercept + r_condition, .width = c(.95, .66)) %>%
-  ggplot(aes(y = condition, x = condition_mean)) +
-  geom_pointintervalh() 
+  ggplot(aes(y = condition, x = condition_mean, xmin = .lower, xmax = .upper)) +
+  geom_pointinterval() 
 
-## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   mutate(condition_mean = b_Intercept + r_condition) %>%
   ggplot(aes(y = condition, x = condition_mean)) +
-  stat_halfeyeh()
+  stat_halfeye()
 
-## ----fig.width = 4.75, fig.height = 2.5-------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   mutate(condition_mean = b_Intercept + r_condition) %>%
   ggplot(aes(y = condition, x = condition_mean, fill = stat(abs(x) < .8))) +
-  stat_halfeyeh() +
+  stat_halfeye() +
   geom_vline(xintercept = c(-.8, .8), linetype = "dashed") +
   scale_fill_manual(values = c("gray80", "skyblue"))
 
@@ -181,37 +199,37 @@ ABC %>%
   add_fitted_draws(m) %>%
   head(10)
 
-## ----fig.width = 3, fig.height = 2.5----------------------------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_fitted_draws(m) %>%
   ggplot(aes(x = .value, y = condition)) +
-  stat_pointintervalh(.width = c(.66, .95))
+  stat_pointinterval(.width = c(.66, .95))
 
-## ----fig.width = 5, fig.height = 3.5----------------------------------------------------------------------------------
+## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_fitted_draws(m) %>%
   ggplot(aes(x = .value, y = condition)) +
-  stat_dotsh(quantiles = 100)
+  stat_dots(quantiles = 100)
 
-## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_predicted_draws(m) %>%
   ggplot(aes(x = .prediction, y = condition)) +
-  stat_slabh()
+  stat_slab()
 
-## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_predicted_draws(m) %>%
   ggplot(aes(y = condition, x = .prediction)) +
-  stat_intervalh(.width = c(.50, .80, .95, .99)) +
+  stat_interval(.width = c(.50, .80, .95, .99)) +
   geom_point(aes(x = response), data = ABC) +
   scale_color_brewer()
 
-## ----fig.width = 4, fig.height = 2.75---------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
 grid = ABC %>%
   data_grid(condition)
 
@@ -223,23 +241,23 @@ preds = grid %>%
 
 ABC %>%
   ggplot(aes(y = condition, x = response)) +
-  stat_intervalh(aes(x = .prediction), data = preds) +
-  stat_pointintervalh(aes(x = .value), data = fits, .width = c(.66, .95), position = position_nudge(y = -0.3)) +
+  stat_interval(aes(x = .prediction), data = preds) +
+  stat_pointinterval(aes(x = .value), data = fits, .width = c(.66, .95), position = position_nudge(y = -0.3)) +
   geom_point() +
   scale_color_brewer()
 
-## ----fig.width = 4, fig.height = 3------------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_fitted_draws(m, dpar = c("mu", "sigma")) %>%
   sample_draws(30) %>%
   ggplot(aes(y = condition)) +
-  stat_dist_slabh(aes(dist = "norm", arg1 = mu, arg2 = sigma), 
+  stat_dist_slab(aes(dist = "norm", arg1 = mu, arg2 = sigma), 
     slab_color = "gray65", alpha = 1/10, fill = NA
   ) +
   geom_point(aes(x = response), data = ABC, shape = 21, fill = "#9ECAE1", size = 2)
 
-## ----fig.width = 4, fig.height = 3------------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_fitted_draws(m, dpar = c("mu", "sigma")) %>%
@@ -251,9 +269,14 @@ ABC %>%
   geom_point(aes(y = response), data = ABC, shape = 21, fill = "#9ECAE1", size = 2, position = position_nudge(x = -.2))
 
 ## ----m_mpg_brm, results = "hide", message = FALSE, warning = FALSE, cache = TRUE--------------------------------------
-m_mpg = brm(mpg ~ hp * cyl, data = mtcars)
+m_mpg = brm(
+  mpg ~ hp * cyl, 
+  data = mtcars, 
+  
+  file = "models/tidy-brms_m_mpg.rds"  # cache model (can be removed)
+)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = med_width, fig.height = small_height-----------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 51)) %>%
@@ -264,7 +287,7 @@ mtcars %>%
   scale_fill_brewer(palette = "Greys") +
   scale_color_brewer(palette = "Set2")
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = med_width, fig.height = small_height-----------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
@@ -276,9 +299,7 @@ mtcars %>%
 
 ## ---------------------------------------------------------------------------------------------------------------------
 set.seed(123456)
-# to keep the example small we use 20 frames, 
-# but something like 100 would be better
-ndraws = 20
+ndraws = 50
 
 p = mtcars %>%
   group_by(cyl) %>%
@@ -293,7 +314,7 @@ p = mtcars %>%
 
 animate(p, nframes = ndraws, fps = 2.5, width = 432, height = 288, res = 96, dev = "png", type = "cairo")
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = med_width, fig.height = small_height-----------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
@@ -304,7 +325,7 @@ mtcars %>%
   scale_fill_brewer(palette = "Set2") +
   scale_color_brewer(palette = "Dark2")
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = med_width, fig.height = small_height-----------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
@@ -315,7 +336,7 @@ mtcars %>%
   scale_fill_brewer() +
   facet_grid(. ~ cyl, space = "free_x", scales = "free_x")
 
-## ----fig.width = 3, fig.height = 1.75---------------------------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 set.seed(1234)
 AB = tibble(
   group = rep(c("a", "b"), each = 20),
@@ -332,10 +353,12 @@ m_ab = brm(
     response ~ group,
     sigma ~ group
   ),
-  data = AB
+  data = AB,
+  
+  file = "models/tidy-brms_m_ab.rds"  # cache model (can be removed)
 )
 
-## ----fig.width = 4, fig.height = 2.5----------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
 grid = AB %>%
   data_grid(group)
 
@@ -347,27 +370,27 @@ preds = grid %>%
 
 AB %>%
   ggplot(aes(x = response, y = group)) +
-  stat_halfeyeh(aes(x = .value), scale = 0.6, position = position_nudge(y = 0.175), data = fits) +
-  stat_intervalh(aes(x = .prediction), data = preds) +
+  stat_halfeye(aes(x = .value), scale = 0.6, position = position_nudge(y = 0.175), data = fits) +
+  stat_interval(aes(x = .prediction), data = preds) +
   geom_point(data = AB) +
   scale_color_brewer()
 
-## ----fig.width = 3, fig.height = 1.75---------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
 grid %>%
   add_fitted_draws(m_ab, dpar = TRUE) %>%
   ggplot(aes(x = sigma, y = group)) +
-  stat_halfeyeh() +
+  stat_halfeye() +
   geom_vline(xintercept = 0, linetype = "dashed")
 
-## ---- fig.width = 4, fig.height = 2.5---------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
 #N.B. the syntax for compare_levels is experimental and may change
 m %>%
   spread_draws(r_condition[condition,]) %>%
   compare_levels(r_condition, by = condition) %>%
   ggplot(aes(y = condition, x = r_condition)) +
-  stat_halfeyeh()
+  stat_halfeye()
 
-## ---- fig.width = 4, fig.height = 2.5---------------------------------------------------------------------------------
+## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
 #N.B. the syntax for compare_levels is experimental and may change
 m %>%
   spread_draws(r_condition[condition,]) %>%
@@ -375,7 +398,7 @@ m %>%
   ungroup() %>%
   mutate(condition = reorder(condition, r_condition)) %>%
   ggplot(aes(y = condition, x = r_condition)) +
-  stat_halfeyeh() +
+  stat_halfeye() +
   geom_vline(xintercept = 0, linetype = "dashed") 
 
 ## ---------------------------------------------------------------------------------------------------------------------
@@ -385,7 +408,14 @@ mtcars_clean = mtcars %>%
 head(mtcars_clean)
 
 ## ----m_cyl_brm, cache = TRUE------------------------------------------------------------------------------------------
-m_cyl = brm(cyl ~ mpg, data = mtcars_clean, family = cumulative, seed = 58393)
+m_cyl = brm(
+  cyl ~ mpg, 
+  data = mtcars_clean, 
+  family = cumulative,
+  seed = 58393,
+  
+  file = "models/tidy-brms_m_cyl.rds"  # cache model (can be removed)
+)
 
 ## ---------------------------------------------------------------------------------------------------------------------
 tibble(mpg = 21) %>%
@@ -402,7 +432,7 @@ tibble(mpg = 21) %>%
   
   median_qi(.value)
 
-## ---- fig.width = 6, fig.height = 4-----------------------------------------------------------------------------------
+## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
 data_plot = mtcars_clean %>%
   ggplot(aes(x = mpg, y = cyl, color = cyl)) +
   geom_point() +
@@ -424,9 +454,7 @@ plot_grid(ncol = 1, align = "v",
 )
 
 ## ---------------------------------------------------------------------------------------------------------------------
-# to keep the example small we use 20 frames, 
-# but something like 100 would be better
-ndraws = 20
+ndraws = 50
 
 p = mtcars_clean %>%
   data_grid(mpg = seq_range(mpg, n = 101)) %>%
@@ -446,7 +474,7 @@ p = mtcars_clean %>%
 
 animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 192, res = 96, dev = "png", type = "cairo")
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
 tibble(mpg = 20) %>%
   add_fitted_draws(m_cyl, value = "P(cyl | mpg = 20)") %>%
   # recover original factor labels
@@ -461,7 +489,7 @@ tibble(mpg = 20) %>%
   ylab("P(cyl = row | mpg = 20)") +
   xlab("P(cyl = col | mpg = 20)")
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
 label_data_function = . %>% 
   ungroup() %>%
   filter(mpg == quantile(mpg, .47)) %>%
@@ -487,7 +515,7 @@ plot_grid(ncol = 1, align = "v",
   fit_plot
 )
 
-## ---- fig.width = 6, fig.height = 4-----------------------------------------------------------------------------------
+## ----fig.width = large_width, fig.height = med_height-----------------------------------------------------------------
 mtcars_clean %>%
   # we use `select` instead of `data_grid` here because we want to make posterior predictions
   # for exactly the same set of observations we have in the original data
@@ -510,7 +538,7 @@ mtcars_clean %>%
     label.size = NA, segment.color = "gray35"
   )
 
-## ---- fig.width = 6.5, fig.height = 4---------------------------------------------------------------------------------
+## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
 mtcars_clean %>%
   select(mpg) %>%
   add_predicted_draws(m_cyl, n = 100, seed = 12345) %>%
@@ -521,10 +549,10 @@ mtcars_clean %>%
   stat_count(aes(group = .draw), geom = "line", position = "identity", alpha = .05) +
   geom_label(data = data.frame(cyl = "4"), y = 9.5, label = "posterior\npredictions",
     hjust = 1, color = "gray50", lineheight = 1, label.size = NA) +
-  geom_label(data = data.frame(cyl = "8"), y = 14, label = "observed data",
-    hjust = 0, color = "red", label.size = NA)
+  geom_label(data = data.frame(cyl = "8"), y = 14, label = "observed\ndata",
+    hjust = 0, color = "red", lineheight = 1, label.size = NA)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
 set.seed(12345)
 
 mtcars_clean %>%
@@ -549,9 +577,15 @@ mtcars_clean %>%
 
 ## ----m_esoph_brm, cache = TRUE----------------------------------------------------------------------------------------
 data(esoph)
-m_esoph_brm = brm(tobgp ~ agegp, data = esoph, family = cumulative())
+m_esoph_brm = brm(
+  tobgp ~ agegp, 
+  data = esoph, 
+  family = cumulative(),
 
-## ---------------------------------------------------------------------------------------------------------------------
+  file = "models/tidy-brms_m_esoph_brm.rds"  
+)
+
+## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
 esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_brm, dpar = TRUE) %>%
@@ -561,7 +595,7 @@ esoph %>%
   scale_size_continuous(guide = FALSE) +
   scale_color_manual(values = brewer.pal(6, "Blues")[-c(1,2)])
 
-## ----fig.height = 2.25, fig.width = 7---------------------------------------------------------------------------------
+## ----fig.width = large_width, fig.height = large_height/2-------------------------------------------------------------
 esoph_plot = esoph %>%
   data_grid(agegp) %>%
   add_fitted_draws(m_esoph_brm) %>%
@@ -575,11 +609,11 @@ esoph_plot = esoph %>%
   xlab("age group")
 
 esoph_plot +
-  stat_summaryh(fun.x = median, geom = "barh", fill = "gray75", width = 1, color = "white") +
-  stat_pointintervalh()
+  stat_summary(fun = median, geom = "bar", fill = "gray75", width = 1, color = "white") +
+  stat_pointinterval()
 
-## ----fig.height = 2.25, fig.width = 7---------------------------------------------------------------------------------
+## ----fig.width = large_width, fig.height = large_height/2-------------------------------------------------------------
 esoph_plot +
-  stat_ccdfintervalh() +
+  stat_ccdfinterval() +
   expand_limits(x = 0) #ensure bars go to 0
 

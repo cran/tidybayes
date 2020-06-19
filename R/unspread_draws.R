@@ -8,20 +8,6 @@
 globalVariables(c("..dimension_values"))
 
 
-
-# deprecated names for unspread_draws --------------------------------------
-
-#' @rdname tidybayes-deprecated
-#' @format NULL
-#' @usage NULL
-#' @export
-unspread_samples = function(..., indices = c(".chain", ".iteration", ".draw")) {
-  .Deprecated("unspread_draws", package = "tidybayes") # nocov
-  unspread_draws(..., draw_indices = indices)               # nocov
-}
-
-
-
 #' Turn tidy data frames of variables from a Bayesian model back into untidy data
 #'
 #' Inverse operations of [spread_draws()] and [gather_draws()], giving
@@ -49,7 +35,7 @@ unspread_samples = function(..., indices = c(".chain", ".iteration", ".draw")) {
 #'
 #' library(dplyr)
 #'
-#' data(RankCorr, package = "tidybayes")
+#' data(RankCorr, package = "ggdist")
 #'
 #' # We can use unspread_draws to allow us to manipulate draws with tidybayes
 #' # and then transform the draws into a form we can use with packages like bayesplot.
