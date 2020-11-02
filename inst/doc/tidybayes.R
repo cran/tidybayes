@@ -330,7 +330,7 @@ m_linear = lm(response ~ condition, data = ABC)
 ## ---------------------------------------------------------------------------------------------------------------------
 linear_results = m_linear %>% 
   emmeans(~ condition) %>% 
-  tidy() %>%
+  tidy(conf.int = TRUE) %>%
   mutate(model = "OLS")
 
 linear_results
