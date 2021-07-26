@@ -2,16 +2,19 @@ params <-
 list(EVAL = TRUE)
 
 ## ----chunk_options, include=FALSE-------------------------------------------------------------------------------------
-# if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
-tiny_width = small_width = med_width = 6.75
-tiny_height = small_height = med_height = 4.5
-large_width = 8; large_height = 5.25
-# } else {
-#   tiny_width = 3; tiny_height = 2.5
-#   small_width = 4.5; small_height = 3
-#   med_width = 5; med_height = 3.5
-#   large_width = 7; large_height = 4.5
-# }
+if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
+  tiny_width = small_width = med_width = 6.75
+  tiny_height = small_height = med_height = 4.5
+  large_width = 8
+  large_height = 5.25
+} else {
+  tiny_width = 5.5
+  tiny_height = 3 + 2/3
+  small_width = med_width = 6.75
+  small_height = med_height = 4.5
+  large_width = 8
+  large_height = 5.25
+}
 
 knitr::opts_chunk$set(
   fig.width = small_width,
@@ -55,7 +58,7 @@ theme_set(theme_tidybayes() + panel_border())
 # 2 to build this vignette (but show the previous chunk to
 # the reader as a best pratice example)
 rstan_options(auto_write = TRUE)
-options(mc.cores = min(2, parallel::detectCores()))
+options(mc.cores = 1) #min(2, parallel::detectCores()))
 
 options(width = 120)
 
@@ -81,11 +84,11 @@ ABC %>%
 ## ---------------------------------------------------------------------------------------------------------------------
 compose_data(ABC)
 
-## ---------------------------------------------------------------------------------------------------------------------
-m = sampling(ABC_stan, data = compose_data(ABC), control = list(adapt_delta=0.99))
+## ----message = FALSE, results = 'hide'--------------------------------------------------------------------------------
+m = sampling(ABC_stan, data = compose_data(ABC), control = list(adapt_delta = 0.99))
 
 ## ---------------------------------------------------------------------------------------------------------------------
-print(m, pars = c("overall_mean", "condition_mean_sd", "condition_mean", "response_sd"))
+m
 
 ## ---------------------------------------------------------------------------------------------------------------------
 str(rstan::extract(m))
@@ -130,12 +133,10 @@ m %>%
   group_by(condition) %>%    # this line not necessary (done automatically by spread_draws)
   median_qi(condition_mean)
 
-## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
+## ---------------------------------------------------------------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
-  median_qi() %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointinterval()
+  summarise_draws()
 
 ## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
@@ -143,19 +144,13 @@ m %>%
   ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
   stat_pointinterval()
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
-m %>%
-  spread_draws(condition_mean[condition]) %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
-  stat_eye()
-
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
   stat_halfeye(.width = c(.90, .5))
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   ggplot(aes(y = fct_rev(condition), x = condition_mean, fill = stat(abs(x) < .8))) +
@@ -172,29 +167,20 @@ m %>%
 m %>%
   spread_draws(condition_mean[condition]) %>%
   median_qi(.width = c(.95, .66)) %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper,
-    size = -.width)) +               # smaller probability interval => thicker line
+  ggplot(aes(
+    y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper,
+    # size = -.width means smaller probability interval => thicker line
+    # this can be omitted, geom_pointinterval includes it automatically
+    # if a .width column is in the input data.
+    size = -.width
+  )) +  
   geom_pointinterval()
 
 ## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
-  median_qi(.width = c(.95, .66)) %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointinterval()
-
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
-m %>%
-  spread_draws(condition_mean[condition]) %>%
-  median_qi(.width = c(.95, .8, .5)) %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointinterval(interval_size_range = c(0.5, 2))
-
-## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
-m %>%
-  spread_draws(condition_mean[condition]) %>%
   ggplot(aes(x = condition_mean, y = fct_rev(condition))) +
-  stat_dots(quantiles = 100)
+  stat_dotsinterval(quantiles = 100)
 
 ## ---------------------------------------------------------------------------------------------------------------------
 set.seed(123)
@@ -228,14 +214,7 @@ m %>%
   mutate(condition_offset = condition_mean - overall_mean) %>%
   median_qi(condition_offset)
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
-m %>%
-  spread_draws(condition_mean[condition], response_sd) %>%
-  mutate(y_rep = rnorm(n(), condition_mean, response_sd)) %>%
-  ggplot(aes(y = fct_rev(condition), x = y_rep)) +
-  stat_slab()
-
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition], response_sd) %>%
   mutate(y_rep = rnorm(n(), condition_mean, response_sd)) %>%
@@ -245,7 +224,7 @@ m %>%
   geom_point(aes(x = response), data = ABC) +
   scale_color_brewer()
 
-## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 draws = m %>%
   spread_draws(condition_mean[condition], response_sd)
 
@@ -259,8 +238,7 @@ ABC %>%
   geom_point(aes(x = response)) +
   scale_color_brewer()
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
-#N.B. the syntax for compare_levels is experimental and may change
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   compare_levels(condition_mean, by = condition) %>%
@@ -307,9 +285,9 @@ m_mpg = brm(
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 51)) %>%
-  add_fitted_draws(m_mpg) %>%
+  add_epred_draws(m_mpg) %>%
   ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-  stat_lineribbon(aes(y = .value)) +
+  stat_lineribbon(aes(y = .epred)) +
   geom_point(data = mtcars) +
   scale_fill_brewer(palette = "Greys") +
   scale_color_brewer(palette = "Set2")
@@ -318,9 +296,12 @@ mtcars %>%
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
-  add_fitted_draws(m_mpg, n = 100) %>%
+  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
+  # ONLY do this IF you are planning to make spaghetti plots, etc.
+  # NEVER subsample to a small sample to plot intervals, densities, etc.
+  add_epred_draws(m_mpg, ndraws = 100) %>%
   ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-  geom_line(aes(y = .value, group = paste(cyl, .draw)), alpha = .1) +
+  geom_line(aes(y = .epred, group = paste(cyl, .draw)), alpha = .1) +
   geom_point(data = mtcars) +
   scale_color_brewer(palette = "Dark2")
 
@@ -344,16 +325,11 @@ bayes_results = m %>%
 
 bayes_results
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 bind_rows(linear_results, bayes_results) %>%
   mutate(condition = fct_rev(condition)) %>%
   ggplot(aes(y = condition, x = estimate, xmin = conf.low, xmax = conf.high, color = model)) +
   geom_pointinterval(position = position_dodge(width = .3))
-
-## ----warning = FALSE, fig.width = small_width, fig.height = tiny_height-----------------------------------------------
-bind_rows(linear_results, bayes_results) %>%
-  rename(term = condition) %>%
-  dotwhisker::dwplot()
 
 ## ---------------------------------------------------------------------------------------------------------------------
 m %>%
@@ -368,14 +344,14 @@ m %>%
   unspread_draws(condition_mean[condition]) %>%
   head(10)
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
   compare_levels(condition_mean, by = condition) %>%
   unspread_draws(condition_mean[condition], drop_indices = TRUE) %>%
   bayesplot::mcmc_areas()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----results = "hide", message = FALSE--------------------------------------------------------------------------------
 m_rst = stan_glm(response ~ condition, data = ABC)
 
 ## ---------------------------------------------------------------------------------------------------------------------
@@ -391,7 +367,7 @@ m_rst %>%
   gather_emmeans_draws() %>%
   median_qi()
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m_rst %>%
   emmeans( ~ condition) %>%
   contrast(method = "pairwise") %>%

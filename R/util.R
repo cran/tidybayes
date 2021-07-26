@@ -10,6 +10,10 @@ deparse0 = function(expr, width.cutoff = 500, ...) {
   paste0(deparse(expr, width.cutoff = width.cutoff, ...), collapse = "")
 }
 
+stop0 = function(...) {
+  stop(..., call. = FALSE)
+}
+
 # Based on https://stackoverflow.com/a/14838753
 # Escapes a string for inclusion in a regex
 escape_regex = function(string) {
@@ -48,6 +52,25 @@ all_names = function(x) {
     stop("Don't know how to handle type `", typeof(x), "`",
       call. = FALSE)
   }
+}
+
+# set missing values from x to provided default values
+defaults = function(x, defaults) {
+  c(x, defaults[setdiff(names(defaults), names(x))])
+}
+
+# return true if there is a method (S3 or S4) for the
+# given function and class signature
+#' @importFrom rlang `%||%`
+has_method = function(f, signature) {
+  # check for S3 methods
+  for (class in signature) {
+    if (!is.null(utils::getS3method(f, class, optional = TRUE))) {
+      return(TRUE)
+    }
+  }
+  # No S3 => check for S4 methods
+  !is.null(methods::selectMethod(f, signature, optional = TRUE))
 }
 
 
@@ -106,4 +129,54 @@ stop_on_non_generic_arg_ = function(parent_dot_args, method_type, ..., which = -
       call. = FALSE
     )
   }
+}
+
+# workarounds -------------------------------------------------------------
+
+# workarounds / replacements for common patterns
+
+map_dfr_ = function(data, fun, ...) {
+  bind_rows(lapply(data, fun, ...))
+}
+
+imap_dfr_ = function(.x, .f, ...) {
+  .names = names(.x) %||% seq_along(.x)
+  bind_rows(mapply(.f, .x, .names, MoreArgs = list(...), SIMPLIFY = FALSE))
+}
+
+map_lgl_ = function(X, FUN, ...) {
+  vapply(X, FUN, FUN.VALUE = logical(1), ...)
+}
+
+map2_ = function(X, Y, FUN) {
+  mapply(FUN, X, Y, USE.NAMES = FALSE, SIMPLIFY = FALSE)
+}
+
+reduce_ = function(.x, .f, .init, ...) {
+  Reduce(function(x, y) .f(x, y, ...), .x, init = .init)
+}
+
+discard_ = function(.x, .f, ...) {
+  i = map_lgl_(.x, .f, ...)
+  .x[is.na(i) | !i]
+}
+
+fct_inorder_ = function(x) {
+  if (is.character(x)) {
+    x = factor(x)
+  } else if (!is.factor(x)) {
+    stop0("`x` must be a factor (or character vector).")
+  }
+  level_i = as.integer(x)[!duplicated(x)]
+  level_i = level_i[!is.na(level_i)]
+  factor(x, levels(x)[level_i], ordered = is.ordered(x))
+}
+
+fct_rev_ = function(x) {
+  if (is.character(x)) {
+    x = factor(x)
+  } else if (!is.factor(x)) {
+    stop0("`x` must be a factor (or character vector).")
+  }
+  factor(x, levels = rev(levels(x)), ordered = is.ordered(x))
 }

@@ -27,7 +27,17 @@ globalVariables(c(".lower", ".upper", ".width"))
 #' but may not set `.iteration`), so be careful when upgrading to new function names.
 #' See *Deprecated Arguments and Column Names*, below, for more information.
 #'
-#' Deprecated functions include:
+#' Functions deprecated in tidybayes 3.0:
+#'
+#' - `fitted_draws` and `add_fitted_draws` are deprecated because their names
+#'   were confusing: it was unclear to many users if these functions returned
+#'   draws from the posterior predictive, the mean of the posterior predictive,
+#'   or the linear predictor (and depending on model type it might have been
+#'   either of the latter). Use [epred_draws()]/[add_epred_draws()] if you
+#'   want the expectation of the posterior predictive and use
+#'   [linpred_draws()]/[add_linpred_draws()] if you want the linear predictor.
+#'
+#' Functions deprecated in tidybayes 1.0:
 #'
 #' \itemize{
 #'
@@ -50,9 +60,11 @@ globalVariables(c(".lower", ".upper", ".width"))
 #'   describing multiple realizations from a distribution.
 #'
 #'   \item `fitted_samples` / `add_fitted_samples` are deprecated names for
-#'   [fitted_draws()] / [add_fitted_draws()],
+#'   `fitted_draws` / `add_fitted_draws`,
 #'   reflecting a package-wide move to using *draws* instead of *samples* for
-#'   describing multiple realizations from a distribution.
+#'   describing multiple realizations from a distribution. (though see
+#'   the note above about the deprecation of `fitted_draws` in favor of
+#'   [epred_draws()] and [linpred_draws()]).
 #'
 #'   \item `predicted_samples` / `add_predicted_samples` are deprecated names for
 #'   [predicted_draws()] / [add_predicted_draws()],
@@ -130,10 +142,23 @@ globalVariables(c(".lower", ".upper", ".width"))
 #'
 #' @section Deprecated Arguments and Column Names:
 #'
+#' Arguments deprecated in tidybayes 3.0 are:
+#'
+#' - The `n` argument is now called `ndraws` in `predicted_draws()`, `linpred_draws()`, etc.
+#'   This prevents some bugs due to partial matching of argument names where `n` might
+#'   be mistaken for `newdata`.
+#' - The `value` argument in `linpred_draws()` is now spelled `linpred` and defaults to
+#'   `".linpred"` in the same way that the `predicted_draws()` and `epred_draws()` functions
+#'   work.
+#' - The `scale` argument in `linpred_draws()` is no longer allowed (use `transform` instead)
+#'   as this naming scheme only made sense when `linpred_draws()` was an alias for
+#'   `fitted_draws()`, which it no longer is (see note above about the deprecation of
+#'   `fitted_draws()`).
+#'
 #' Versions of tidybayes before version 1.0 used a different naming scheme for several
 #' arguments and output columns.
 #'
-#' Deprecated arguments and column names are:
+#' Arguments and column names deprecated in tidybayes 1.0 are:
 #'
 #' \itemize{
 #'   \item `term` is now `.variable`
@@ -174,6 +199,64 @@ ggeye = function(data = NULL, mapping = NULL, ...) {
 }
 
 
+# [add_]fitted_draws -------------------------------------------------
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+add_fitted_draws = function(newdata, model, ..., n = NULL) {
+  fitted_draws(model = model, newdata = newdata, ..., n = n)
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+fitted_draws = function(
+  model, newdata, ..., value = ".value", n = NULL, scale = c("response", "linear")
+) {
+  UseMethod("fitted_draws")
+}
+
+#' @rdname tidybayes-deprecated
+#' @format NULL
+#' @usage NULL
+#' @export
+fitted_draws.default = function(
+  model, newdata, ..., value = ".value", n = NULL, scale = c("response", "linear")
+) {
+  scale = match.arg(scale)
+  deprecation_message_base = paste0(
+    "`fitted_draws` and `add_fitted_draws` are deprecated as their names were confusing.\n",
+    "Use [add_]epred_draws() to get the expectation of the posterior predictive.\n",
+    "Use [add_]linpred_draws() to get the distribution of the linear predictor.\n"
+  )
+  switch(scale,
+    response = {
+      .Deprecated("epred_draws", "tidybayes", paste0(deprecation_message_base,
+        'For example, you used [add_]fitted_draws(..., scale = "response"), which\n',
+        'means you most likely want [add_]epred_draws(...).'
+      ))
+      epred_draws(
+        object = model, newdata = newdata, ...,
+        value = value, ndraws = n
+      )
+    },
+    linear = {
+      .Deprecated("linpred_draws", "tidybayes", paste0(deprecation_message_base,
+        'For example, you used [add_]fitted_draws(..., scale = "linear"), which\n',
+        'means you most likely want [add_]linpred_draws(...).'
+      ))
+      linpred_draws(
+        object = model, newdata = newdata, ...,
+        value = value, ndraws = n
+      )
+    }
+  )
+}
+
+
 # [add_]fitted_draws aliases -------------------------------
 
 #' @rdname tidybayes-deprecated
@@ -181,8 +264,8 @@ ggeye = function(data = NULL, mapping = NULL, ...) {
 #' @usage NULL
 #' @export
 fitted_samples = function(model, newdata, ..., n = NULL) {
-  .Deprecated("fitted_draws", package = "tidybayes") # nocov
-  fitted_samples_(model, newdata,  ..., n = n)       # nocov
+  # no deprecation message here as it will be handled in fitted_draws
+  fitted_samples_(model, newdata, ..., n = n)       # nocov
 }
 fitted_samples_ = function(model, newdata, var = "estimate", ..., n = NULL, category = "category") {
   combine_chains_for_deprecated_(fitted_draws(                      # nocov
@@ -195,7 +278,7 @@ fitted_samples_ = function(model, newdata, var = "estimate", ..., n = NULL, cate
 #' @usage NULL
 #' @export
 add_fitted_samples = function(newdata, model, ..., n = NULL) {
-  .Deprecated("add_fitted_draws", package = "tidybayes") # nocov
+  # no deprecation message here as it will be handled in fitted_draws
   fitted_samples_(model, newdata, ..., n = n)            # nocov
 }
 
@@ -455,7 +538,7 @@ geom_intervalh = function(
   ggdist:::layer_geom_slabinterval(
     data = data,
     mapping = mapping,
-    default_mapping = aes(xmin = .lower, xmax = .upper, color = forcats::fct_rev(ordered(.width))),
+    default_mapping = aes(xmin = .lower, xmax = .upper, color = fct_rev_(ordered(.width))),
     stat = stat,
     geom = GeomIntervalh,
     position = position,
@@ -473,7 +556,6 @@ geom_intervalh = function(
 #' @rdname tidybayes-deprecated
 #' @format NULL
 #' @usage NULL
-#' @importFrom plyr defaults
 #' @export
 GeomIntervalh = ggproto("GeomIntervalh", ggdist::GeomSlabinterval,
   default_aes = defaults(aes(

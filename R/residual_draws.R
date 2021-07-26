@@ -8,43 +8,61 @@
 
 #' @rdname add_predicted_draws
 #' @export
-add_residual_draws = function(newdata, model, residual = ".residual", ..., n = NULL, seed = NULL, re_formula = NULL,
-  category = ".category"
+add_residual_draws = function(
+  newdata, object, ...,
+  value = ".residual", ndraws = NULL, seed = NULL, re_formula = NULL, category = ".category",
+  # deprecated arguments
+  n
 ) {
-  residual_draws(model, newdata, residual, ..., n = n, seed = seed, re_formula = re_formula,
-    category = category)
+  ndraws = .Deprecated_argument_alias(ndraws, n)
+  residual_draws(
+    object = object, newdata = newdata, ...,
+    value = value, ndraws = ndraws, seed = seed, re_formula = re_formula, category = category
+  )
 }
 
 #' @rdname add_predicted_draws
 #' @export
-residual_draws = function(model, newdata, residual = ".residual", ..., n = NULL, seed = NULL, re_formula = NULL,
-  category = ".category"
+residual_draws = function(
+  object, newdata, ...,
+  value = ".residual", ndraws = NULL, seed = NULL, re_formula = NULL, category = ".category",
+  # deprecated arguments
+  n, residual
 ) {
-  UseMethod("residual_draws")
-}
-
-#' @rdname add_predicted_draws
-#' @export
-residual_draws.default = function(model, newdata, ...) {
-  stop(paste0("Models of type ", deparse0(class(model)), " are not currently supported by `residual_draws`"))
-}
-
-#' @rdname add_predicted_draws
-#' @export
-residual_draws.brmsfit = function(model, newdata, residual = ".residual", ..., n = NULL, seed = NULL, re_formula = NULL,
-  category = ".category"
-) {
-  if (!requireNamespace("brms", quietly = TRUE)) {
-    stop("The `brms` package is needed for `residual_draws` to support `brmsfit` objects.", call. = FALSE) # nocov
+  value = .Deprecated_argument_alias(value, residual)
+  ndraws = .Deprecated_argument_alias(ndraws, n)
+  # we need to update the argument list as well if there were deprecated
+  # arguments or partial matching will assign `n` to `newdata`
+  if (!missing(n) || !missing(residual)) {
+    residual_draws(
+      object = object, newdata = newdata, ...,
+      value = value, ndraws = ndraws, seed = seed, re_formula = re_formula, category = category
+    )
+  } else {
+    UseMethod("residual_draws")
   }
+}
 
+#' @rdname add_predicted_draws
+#' @export
+residual_draws.default = function(object, newdata, ...) {
+  stop(paste0("Models of type ", deparse0(class(object)), " are not currently supported by `residual_draws`"))
+}
+
+#' @rdname add_predicted_draws
+#' @export
+residual_draws.brmsfit = function(
+  object, newdata, ...,
+  value = ".residual", ndraws = NULL, seed = NULL, re_formula = NULL, category = ".category"
+) {
   stop_on_non_generic_arg_(
-    names(enquos(...)), "[add_]residual_draws", n = "nsamples"
+    names(enquos(...)), "[add_]residual_draws", ndraws = "nsamples"
   )
 
-  set.seed(seed)
-  fitted_predicted_draws_brmsfit_(
-    residuals, model, newdata, output_name = residual, ...,
-    nsamples = n, re_formula = re_formula, category = category
+  pred_draws_(
+    .f = residuals, ...,
+    object = object, newdata = newdata, output_name = value,
+    seed = seed, nsamples = ndraws, re_formula = re_formula, category = category,
+    summary = FALSE
   )
 }

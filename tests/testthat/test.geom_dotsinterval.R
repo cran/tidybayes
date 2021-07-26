@@ -5,11 +5,11 @@
 
 library(dplyr)
 
-context("geom_dotsinterval")
+
 
 test_that("vanilla dots geoms and stats work", {
-  skip_if_not_installed("vdiffr")
-  skip_if_not_installed("svglite")
+  skip_if_no_vdiffr()
+
 
   set.seed(1234)
   p = tribble(

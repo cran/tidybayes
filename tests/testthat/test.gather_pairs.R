@@ -4,9 +4,8 @@
 ###############################################################################
 
 library(dplyr)
-library(forcats)
 
-context("gather_pairs")
+
 
 set.seed(1234)
 t_a = rnorm(10)

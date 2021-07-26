@@ -63,7 +63,8 @@ comparison_types = within(list(), {
 #' group will be ignored, as it is not possible to make comparisons both
 #' within some variable and across it simultaneously).
 #' @param variable Bare (unquoted) name of a column in data representing the
-#' variable to compare across levels.
+#' variable to compare across levels. Can be a numeric variable (as in
+#' long-data-frame-of-draws format) or a [`posterior::rvar`].
 #' @param by Bare (unquoted) name of a column in data that is a
 #' `factor` or `ordered`. The value of `variable` will be
 #' compared across pairs of levels of this `factor`.
@@ -98,7 +99,7 @@ comparison_types = within(list(), {
 #' value.
 #' @param ignore_groups character vector of names of groups to ignore by
 #' default in the input grouping. This is primarily provided to make it
-#' easier to pipe output of [add_fitted_draws()] into this function,
+#' easier to pipe output of [add_epred_draws()] into this function,
 #' as that function provides a `".row"` output column that is grouped,
 #' but which is virtually never desired to group by when using `compare_levels`.
 #' @return A `data.frame` with the same columns as `data`, except
@@ -142,12 +143,10 @@ comparison_types = within(list(), {
 #'   facet_grid(cols = vars(i))
 #'
 #' @importFrom tidyselect vars_pull
-#' @importFrom plyr ldply
 #' @importFrom tidyr spread_
 #' @importFrom tidyselect one_of
 #' @importFrom tibble as_tibble
 #' @importFrom rlang sym quo_name eval_tidy quo_get_expr
-#' @importFrom purrr imap_dfr
 #' @export
 compare_levels = function(data, variable, by, fun=`-`, comparison = "default",
     draw_indices = c(".chain", ".iteration", ".draw"),
@@ -165,6 +164,8 @@ compare_levels = function(data, variable, by, fun=`-`, comparison = "default",
     group_by_at(union(groups_, by))
 }
 
+#' @importFrom tidyr pivot_wider
+#' @importFrom tidyselect all_of
 compare_levels_ = function(data, variable, by, fun, comparison, draw_indices) {
   #drop unused levels from "by" column
   data[[by]] = factor(data[[by]])
@@ -174,7 +175,7 @@ compare_levels_ = function(data, variable, by, fun, comparison, draw_indices) {
   data = data[, union(draw_indices, c(variable, by))]
 
   #get wide version of data that we can use to generate comparisons easily
-  data_wide = spread_(data, by, variable)
+  data_wide = pivot_wider(data, names_from = all_of(by), values_from = all_of(variable))
 
   # determine a pretty function name
   fun_name = if (is.name(quo_get_expr(fun))) quo_name(fun) else ":"
@@ -194,7 +195,7 @@ compare_levels_ = function(data, variable, by, fun, comparison, draw_indices) {
   else comparison_function(data[[by]])
 
   #make comparisons
-  imap_dfr(comparison_levels, .id = NULL, function(levels., by_name) {
+  imap_dfr_(comparison_levels, function(levels., by_name) {
     comparison = if (is.language(levels.)) {
       #user-supplied quoted expressions are evaluated within the data frame
       if (is.numeric(by_name) || by_name == "") {

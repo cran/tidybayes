@@ -15,7 +15,7 @@ globalVariables(c(".."))
 #' Extract draws from a Bayesian model for one or more variables (possibly with named
 #' dimensions) into one of two types of long-format data frames.
 #'
-#' Imagine a JAGS or Stan fit named `fit`. The model may contain a variable named
+#' Imagine a JAGS or Stan fit named `model`. The model may contain a variable named
 #' `b[i,v]` (in the JAGS or Stan language) with dimension `i` in `1:100` and
 #' dimension `v` in `1:3`. However, the default format for draws returned from
 #' JAGS or Stan in R will not reflect this indexing structure, instead
@@ -34,7 +34,7 @@ globalVariables(c(".."))
 #' column named `".value"`. To use naming schemes from other packages (such as `broom`), consider passing
 #' results through functions like [to_broom_names()] or [to_ggmcmc_names()].
 #'
-#' For example, `spread_draws(fit, a[i], b[i,v])` might return a grouped
+#' For example, `spread_draws(model, a[i], b[i,v])` might return a grouped
 #' data frame (grouped by `i` and `v`), with:
 #' \itemize{
 #'    \item column `".chain"`: the chain number. `NA` if not applicable to the model
@@ -49,7 +49,7 @@ globalVariables(c(".."))
 #'    \item column `"b"`: value of `"b[i,v]"` for draw `".draw"`
 #'  }
 #'
-#' `gather_draws(fit, a[i], b[i,v])` on the same fit would return a grouped
+#' `gather_draws(model, a[i], b[i,v])` on the same model would return a grouped
 #' data frame (grouped by `i` and `v`), with:
 #' \itemize{
 #'    \item column `".chain"`: the chain number
@@ -64,15 +64,15 @@ globalVariables(c(".."))
 #'  }
 #'
 #' `spread_draws` and `gather_draws` can use type information
-#' applied to the `fit` object by [recover_types()] to convert columns
+#' applied to the `model` object by [recover_types()] to convert columns
 #' back into their original types. This is particularly helpful if some of the dimensions in
 #' your model were originally factors. For example, if the `v` dimension
 #' in the original data frame `data` was a factor with levels `c("a","b","c")`,
 #' then we could use `recover_types` before `spread_draws`:
 #'
-#' \preformatted{fit \%>\%
+#' \preformatted{model \%>\%
 #'  recover_types(data) %\>\%
-#'  spread_draws(fit, b[i,v])
+#'  spread_draws(model, b[i,v])
 #' }
 #'
 #' Which would return the same data frame as above, except the `"v"` column
@@ -83,26 +83,26 @@ globalVariables(c(".."))
 #' For example, if we have a variable `d[i]` with the same `i` subscript
 #' as `b[i,v]`, and a variable `x` with no subscripts, we could do this:
 #'
-#' \preformatted{spread_draws(fit, x, d[i], b[i,v])}
+#' \preformatted{spread_draws(model, x, d[i], b[i,v])}
 #'
 #' Which is roughly equivalent to this:
 #'
-#' \preformatted{spread_draws(fit, x) \%>\%
-#'  inner_join(spread_draws(fit, d[i])) \%>\%
-#'  inner_join(spread_draws(fit, b[i,v])) \%>\%
+#' \preformatted{spread_draws(model, x) \%>\%
+#'  inner_join(spread_draws(model, d[i])) \%>\%
+#'  inner_join(spread_draws(model, b[i,v])) \%>\%
 #'  group_by(i,v)
 #' }
 #'
 #' Similarly, this:
 #'
-#' \preformatted{gather_draws(fit, x, d[i], b[i,v])}
+#' \preformatted{gather_draws(model, x, d[i], b[i,v])}
 #'
 #' Is roughly equivalent to this:
 #'
 #' \preformatted{bind_rows(
-#'  gather_draws(fit, x),
-#'  gather_draws(fit, d[i]),
-#'  gather_draws(fit, b[i,v])
+#'  gather_draws(model, x),
+#'  gather_draws(model, d[i]),
+#'  gather_draws(model, b[i,v])
 #' )}
 #'
 #'
@@ -110,18 +110,18 @@ globalVariables(c(".."))
 #' the same dimensions. For example, if we have several variables with the same
 #' subscripts `i` and `v`, we could do either of these:
 #'
-#' \preformatted{spread_draws(fit, c(w, x, y, z)[i,v])}
-#' \preformatted{spread_draws(fit, cbind(w, x, y, z)[i,v])  # equivalent}
+#' \preformatted{spread_draws(model, c(w, x, y, z)[i,v])}
+#' \preformatted{spread_draws(model, cbind(w, x, y, z)[i,v])  # equivalent}
 #'
 #' Each of which is roughly equivalent to this:
 #'
-#' \preformatted{spread_draws(fit, w[i,v], x[i,v], y[i,v], z[i,v])}
+#' \preformatted{spread_draws(model, w[i,v], x[i,v], y[i,v], z[i,v])}
 #'
 #' Besides being more compact, the `c()`-style syntax is currently also
 #' faster (though that may change).
 #'
 #' Dimensions can be omitted from the resulting data frame by leaving their names
-#' blank; e.g. `spread_draws(fit, b[,v])` will omit the first dimension of
+#' blank; e.g. `spread_draws(model, b[,v])` will omit the first dimension of
 #' `b` from the output. This is useful if a dimension is known to contain all
 #' the same value in a given model.
 #'
@@ -129,7 +129,7 @@ globalVariables(c(".."))
 #' into a wide format and whose names will be the base variable name, plus a dot
 #' ("."), plus the value of the dimension at `..`. For example:
 #'
-#' `spread_draws(fit, b[i,..])` would return a grouped data frame
+#' `spread_draws(model, b[i,..])` would return a grouped data frame
 #' (grouped by `i`), with:
 #' \itemize{
 #'  \item column `".chain"`: the chain number
@@ -144,11 +144,11 @@ globalVariables(c(".."))
 #' An optional clause in the form `| wide_dimension` can also be used to put
 #' the data frame into a wide format based on `wide_dimension`. For example, this:
 #'
-#' \preformatted{spread_draws(fit, b[i,v] | v)}
+#' \preformatted{spread_draws(model, b[i,v] | v)}
 #'
 #' is roughly equivalent to this:
 #'
-#' \preformatted{spread_draws(fit, b[i,v]) \%>\% spread(v,b)}
+#' \preformatted{spread_draws(model, b[i,v]) \%>\% spread(v,b)}
 #'
 #' The main difference between using the `|` syntax instead of the
 #' `..` syntax is that the `|` syntax respects prototypes applied to
@@ -156,7 +156,7 @@ globalVariables(c(".."))
 #' columns with nicer names. For example:
 #'
 #' ```
-#' fit %>% recover_types(data) %>% spread_draws(b[i,v] | v)
+#' model %>% recover_types(data) %>% spread_draws(b[i,v] | v)
 #' ```
 #'
 #' would return a grouped data frame
@@ -175,7 +175,7 @@ globalVariables(c(".."))
 #' into vectors, matrices, or n-dimensional arrays (depending on how many dimensions
 #' are specified with `.`).
 #'
-#' For example, `spread_draws(fit, a[.], b[.,.])` might return a
+#' For example, `spread_draws(model, a[.], b[.,.])` might return a
 #' data frame, with:
 #' \itemize{
 #'    \item column `".chain"`: the chain number.
@@ -190,22 +190,22 @@ globalVariables(c(".."))
 #'
 #' Finally, variable names can be regular expressions by setting `regex = TRUE`; e.g.:
 #'
-#' \preformatted{spread_draws(fit, `b_.*`[i], regex = TRUE)}
+#' \preformatted{spread_draws(model, `b_.*`[i], regex = TRUE)}
 #'
 #' Would return a tidy data frame with variables starting with `b_` and having one dimension.
 #'
-#' @param model A supported Bayesian model fit. Tidybayes supports a variety of model objects;
-#' for a full list of supported models, see [tidybayes-models].
+#' @template param-model
 #' @param ... Expressions in the form of
 #' `variable_name[dimension_1, dimension_2, ...] | wide_dimension`. See *Details*.
 #' @param regex If `TRUE`, variable names are treated as regular expressions and all column matching the
 #' regular expression and number of dimensions are included in the output. Default `FALSE`.
 #' @param sep Separator used to separate dimensions in variable names, as a regular expression.
-#' @param n The number of draws to return, or `NULL` to return all draws.
-#' @param seed A seed to use when subsampling draws (i.e. when `n` is not `NULL`).
+#' @template param-ndraws
+#' @template param-seed
+#' @template param-deprecated-n
 #' @return A data frame.
 #' @author Matthew Kay
-#' @seealso [recover_types()], [compose_data()].
+#' @seealso [spread_rvars()], [recover_types()], [compose_data()].
 #' @keywords manip
 #' @examples
 #'
@@ -229,12 +229,13 @@ globalVariables(c(".."))
 #'   median_qi()
 #'
 #' @importFrom rlang enquos
-#' @importFrom purrr reduce
 #' @importFrom dplyr inner_join group_by_at
 #' @rdname spread_draws
 #' @export
-spread_draws = function(model, ..., regex = FALSE, sep = "[, ]", n = NULL, seed = NULL) {
-  draws = sample_draws_from_model_(model, n, seed)
+spread_draws = function(model, ..., regex = FALSE, sep = "[, ]", ndraws = NULL, seed = NULL, n) {
+  ndraws = .Deprecated_argument_alias(ndraws, n)
+
+  draws = sample_draws_from_model_(model, ndraws, seed)
 
   tidysamples = lapply(enquos(...), function(variable_spec) {
     spread_draws_(draws, variable_spec, regex = regex, sep = sep)
@@ -245,18 +246,18 @@ spread_draws = function(model, ..., regex = FALSE, sep = "[, ]", n = NULL, seed 
   #first data frame in a join is retained), so we'll have to recreate
   #the full set of groups from all the data frames after we join them
   groups_ = tidysamples %>%
-    map(group_vars) %>%
-    reduce(union)
+    lapply(group_vars) %>%
+    reduce_(union)
 
   tidysamples %>%
-    reduce(function(tidysample1, tidysample2) {
+    reduce_(function(tidysample1, tidysample2) {
       by_ = intersect(names(tidysample1), names(tidysample2))
       inner_join(tidysample1, tidysample2, by = by_)
     }) %>%
     group_by_at(groups_)
 }
 
-#' @import dplyr
+#' @importFrom dplyr mutate group_by_at
 #' @importFrom tidyr spread_
 #' @importFrom rlang has_name
 spread_draws_ = function(draws, variable_spec, regex = FALSE, sep = "[, ]") {
@@ -270,14 +271,8 @@ spread_draws_ = function(draws, variable_spec, regex = FALSE, sep = "[, ]") {
   long_draws = spread_draws_long_(draws, variable_names, dimension_names, regex = regex, sep = sep)
 
   #convert variable and/or dimensions back into usable data types
-  constructors = attr(draws, "tidybayes_constructors")
-  if (is.null(constructors)) constructors = list()
-  for (column_name in c(variable_names, dimension_names)) {
-    if (column_name %in% names(constructors)) {
-      #we have a data type constructor for this dimension, convert it
-      long_draws[[column_name]] = constructors[[column_name]](long_draws[[column_name]])
-    }
-  }
+  #that were set on the model using recover_types
+  long_draws = convert_cols_to_types_from_model(long_draws, c(variable_names, dimension_names), draws)
 
   #spread a column into wide format if requested (only if one variable, because
   #we can't spread multiple keys simultaneously for the same value)
@@ -313,7 +308,7 @@ spread_draws_ = function(draws, variable_spec, regex = FALSE, sep = "[, ]") {
 ## variable_names: a character vector of names of variables
 ## dimension_names: a character vector of dimension names
 #' @importFrom tidyr spread_ separate gather_
-#' @import dplyr
+#' @importFrom dplyr summarise_all group_by_at
 spread_draws_long_ = function(draws, variable_names, dimension_names, regex = FALSE, sep = "[, ]") {
   if (!regex) {
     variable_names = escape_regex(variable_names)
@@ -433,7 +428,7 @@ spread_draws_long_ = function(draws, variable_names, dimension_names, regex = FA
 ## long_draws: long draws in the internal long draws format from spread_draws_long_
 ## dimension_names: dimensions not used for nesting
 ## nested_dimension_names: dimensions to be nested
-#' @importFrom forcats fct_inorder
+#' @importFrom dplyr filter summarise_at
 nest_dimensions_ = function(long_draws, dimension_names, nested_dimension_names) {
   ragged = FALSE
   value_name = ".value"
@@ -443,7 +438,7 @@ nest_dimensions_ = function(long_draws, dimension_names, nested_dimension_names)
     if (is.character(long_draws[[dimension_name]])) {
       # character columns are converted into in-order factors to preserve
       # the order of their levels when grouping / summarising below
-      long_draws[[dimension_name]] = fct_inorder(long_draws[[dimension_name]])
+      long_draws[[dimension_name]] = fct_inorder_(long_draws[[dimension_name]])
     }
   }
 
@@ -474,7 +469,7 @@ nest_dimensions_ = function(long_draws, dimension_names, nested_dimension_names)
 
     if (ragged) {
       # this is ragged, so first we'll combine all the valid indices of this dimension together
-      indices = reduce(first_draw_indices, union)
+      indices = Reduce(union, first_draw_indices)
     } else {
       # this is not ragged, so we can just use the first value of indices
       indices = first_draw_indices[[1]]
@@ -482,8 +477,10 @@ nest_dimensions_ = function(long_draws, dimension_names, nested_dimension_names)
       # array is not ragged, so combining should be easy...
       if (is.character(indices) || is.factor(indices)) {
         # indices are strings, so update the names before we combine
-        long_draws[[value_name]] = map2(long_draws[[value_name]], long_draws[[dimension_name]],
-          ~ set_names(.x, as.character(.y)))
+        long_draws[[value_name]] = map2_(
+          long_draws[[value_name]], long_draws[[dimension_name]],
+          function(x, y) set_names(x, as.character(y))
+        )
       } else if (!identical(indices, seq_along(indices))) {
         if (min(indices) < 1 || !is_integerish(indices)) {
           # indices are not an integer sequence >= 1, convert to strings
@@ -511,7 +508,7 @@ nest_dimensions_ = function(long_draws, dimension_names, nested_dimension_names)
 
       #then we'll re-index each value
       long_draws[[value_name]] =
-        map2(long_draws[[dimension_name]], long_draws[[value_name]], function(indices, old_value) {
+        map2_(long_draws[[dimension_name]], long_draws[[value_name]], function(indices, old_value) {
           new_value = template_list
           if (is_character_index) {
             indices = as.character(indices)
@@ -528,9 +525,9 @@ nest_dimensions_ = function(long_draws, dimension_names, nested_dimension_names)
     # that the first dimension creates a vector (not a Nx1 array), which is what we want if
     # there is only one dimension.
     if (i == 1) {
-      long_draws[[value_name]] = map(long_draws[[value_name]], unlist, recursive = FALSE)
+      long_draws[[value_name]] = lapply(long_draws[[value_name]], unlist, recursive = FALSE)
     } else {
-      long_draws[[value_name]] = map(long_draws[[value_name]], abind0)
+      long_draws[[value_name]] = lapply(long_draws[[value_name]], abind0)
     }
 
     long_draws[[dimension_name]] = NULL
@@ -543,12 +540,12 @@ nest_dimensions_ = function(long_draws, dimension_names, nested_dimension_names)
 # helpers -----------------------------------------------------------------
 
 # sample draws from a model
-sample_draws_from_model_ = function(model, n = NULL, seed = NULL) {
+sample_draws_from_model_ = function(model, ndraws = NULL, seed = NULL) {
   draws = tidy_draws(model)
 
-  if (!is.null(n)) {
+  if (!is.null(ndraws)) {
     if (!is.null(seed)) set.seed(seed)
-    draws = sample_n(draws, n)
+    draws = sample_n(draws, ndraws)
   }
 
   draws
@@ -617,18 +614,17 @@ abind0 = function(vectors) {
 # 1. A vector of variable names
 # 2. A vector of dimension names (or NULL if none)
 # 3. The name of the wide dimension (or NULL if none)
-#' @importFrom purrr reduce map map2
 #' @importFrom rlang set_names new_data_mask quo_get_expr
 parse_variable_spec = function(variable_spec) {
   names = all_names(quo_get_expr(variable_spec))
   #specs for each bare variable name in the spec expression
   names_spec = names %>%
     set_names() %>%
-    map(function(name) list(name, NULL, NULL))
+    lapply(function(name) list(name, NULL, NULL))
 
 
   c_function = function(...) {
-    reduce(list(...), function(spec1, spec2) map2(spec1, spec2, base::c))
+    Reduce(function(spec1, spec2) map2_(spec1, spec2, base::c), list(...))
   }
 
   spec_env = as.environment(c(
@@ -668,4 +664,19 @@ parse_variable_spec = function(variable_spec) {
 
   spec_data_mask = new_data_mask(spec_env)
   eval_tidy(variable_spec, spec_data_mask)
+}
+
+# convert the specified columns in the given data frame according to
+# the type constructors provided in the given model
+convert_cols_to_types_from_model = function(df, columns, model) {
+  constructors = attr(model, "tidybayes_constructors")
+  if (!is.null(constructors)) {
+    for (column_name in columns) {
+      if (column_name %in% names(constructors)) {
+        #we have a data type constructor for this dimension, convert it
+        df[[column_name]] = constructors[[column_name]](df[[column_name]])
+      }
+    }
+  }
+  df
 }

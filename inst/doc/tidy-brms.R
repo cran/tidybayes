@@ -2,16 +2,19 @@ params <-
 list(EVAL = TRUE)
 
 ## ----chunk_options, include=FALSE---------------------------------------------
-# if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
-tiny_width = small_width = med_width = 6.75
-tiny_height = small_height = med_height = 4.5
-large_width = 8; large_height = 5.25
-# } else {
-#   tiny_width = 3; tiny_height = 2.5
-#   small_width = 4.5; small_height = 3
-#   med_width = 5; med_height = 3.5
-#   large_width = 7; large_height = 4.5
-# }
+if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
+  tiny_width = small_width = med_width = 6.75
+  tiny_height = small_height = med_height = 4.5
+  large_width = 8
+  large_height = 5.25
+} else {
+  tiny_width = 5.5
+  tiny_height = 3 + 2/3
+  small_width = med_width = 6.75
+  small_height = med_height = 4.5
+  large_width = 8
+  large_height = 5.25
+}
 
 knitr::opts_chunk$set(
   fig.width = small_width,
@@ -41,6 +44,7 @@ library(brms)
 library(ggrepel)
 library(RColorBrewer)
 library(gganimate)
+library(posterior)
 
 theme_set(theme_tidybayes() + panel_border())
 
@@ -54,7 +58,7 @@ theme_set(theme_tidybayes() + panel_border())
 # 2 to build this vignette (but show the previous chunk to
 # the reader as a best pratice example)
 rstan_options(auto_write = TRUE)
-options(mc.cores = min(2, parallel::detectCores()))
+options(mc.cores = 1) #min(2, parallel::detectCores()))
 
 options(width = 120)
 
@@ -76,7 +80,7 @@ ABC %>%
   ggplot(aes(y = condition, x = response)) +
   geom_point()
 
-## ----m_brm, cache = TRUE----------------------------------------------------------------------------------------------
+## ----m_brm, results = "hide", message = FALSE, cache = TRUE-----------------------------------------------------------
 m = brm(
   response ~ (1|condition), 
   data = ABC, 
@@ -143,6 +147,11 @@ m %>%
   median_qi(r_condition)      # b is not necessary (it is the only non-group column)
 
 ## ---------------------------------------------------------------------------------------------------------------------
+m %>%
+  spread_draws(r_condition[condition,]) %>%
+  summarise_draws()
+
+## ---------------------------------------------------------------------------------------------------------------------
 m %>% 
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   head(10)
@@ -158,33 +167,26 @@ m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   median_qi(condition_mean = b_Intercept + r_condition)
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
-m %>%
-  spread_draws(b_Intercept, r_condition[condition,]) %>%
-  median_qi(condition_mean = b_Intercept + r_condition) %>%
-  ggplot(aes(y = condition, x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointinterval()
-
 ## ---------------------------------------------------------------------------------------------------------------------
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   median_qi(condition_mean = b_Intercept + r_condition, .width = c(.95, .8, .5))
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   median_qi(condition_mean = b_Intercept + r_condition, .width = c(.95, .66)) %>%
   ggplot(aes(y = condition, x = condition_mean, xmin = .lower, xmax = .upper)) +
   geom_pointinterval() 
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   mutate(condition_mean = b_Intercept + r_condition) %>%
   ggplot(aes(y = condition, x = condition_mean)) +
   stat_halfeye()
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   mutate(condition_mean = b_Intercept + r_condition) %>%
@@ -196,31 +198,31 @@ m %>%
 ## ---------------------------------------------------------------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
-  add_fitted_draws(m) %>%
+  add_epred_draws(m) %>%
   head(10)
 
 ## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
-  add_fitted_draws(m) %>%
-  ggplot(aes(x = .value, y = condition)) +
+  add_epred_draws(m) %>%
+  ggplot(aes(x = .epred, y = condition)) +
   stat_pointinterval(.width = c(.66, .95))
 
-## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
-  add_fitted_draws(m) %>%
-  ggplot(aes(x = .value, y = condition)) +
-  stat_dots(quantiles = 100)
+  add_epred_draws(m) %>%
+  ggplot(aes(x = .epred, y = condition)) +
+  stat_dotsinterval(quantiles = 100)
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_predicted_draws(m) %>%
   ggplot(aes(x = .prediction, y = condition)) +
   stat_slab()
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_predicted_draws(m) %>%
@@ -229,12 +231,12 @@ ABC %>%
   geom_point(aes(x = response), data = ABC) +
   scale_color_brewer()
 
-## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 grid = ABC %>%
   data_grid(condition)
 
-fits = grid %>%
-  add_fitted_draws(m)
+means = grid %>%
+  add_epred_draws(m)
 
 preds = grid %>%
   add_predicted_draws(m)
@@ -242,14 +244,14 @@ preds = grid %>%
 ABC %>%
   ggplot(aes(y = condition, x = response)) +
   stat_interval(aes(x = .prediction), data = preds) +
-  stat_pointinterval(aes(x = .value), data = fits, .width = c(.66, .95), position = position_nudge(y = -0.3)) +
+  stat_pointinterval(aes(x = .epred), data = means, .width = c(.66, .95), position = position_nudge(y = -0.3)) +
   geom_point() +
   scale_color_brewer()
 
-## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
-  add_fitted_draws(m, dpar = c("mu", "sigma")) %>%
+  add_epred_draws(m, dpar = c("mu", "sigma")) %>%
   sample_draws(30) %>%
   ggplot(aes(y = condition)) +
   stat_dist_slab(aes(dist = "norm", arg1 = mu, arg2 = sigma), 
@@ -257,15 +259,15 @@ ABC %>%
   ) +
   geom_point(aes(x = response), data = ABC, shape = 21, fill = "#9ECAE1", size = 2)
 
-## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 ABC %>%
   data_grid(condition) %>%
-  add_fitted_draws(m, dpar = c("mu", "sigma")) %>%
+  add_epred_draws(m, dpar = c("mu", "sigma")) %>%
   ggplot(aes(x = condition)) +
   stat_dist_slab(aes(dist = "norm", arg1 = mu, arg2 = sigma), 
     slab_color = "gray65", alpha = 1/10, fill = NA, data = . %>% sample_draws(30), scale = .5
   ) +
-  stat_halfeye(aes(y = .value), side = "bottom", scale = .5) +
+  stat_halfeye(aes(y = .epred), side = "bottom", scale = .5) +
   geom_point(aes(y = response), data = ABC, shape = 21, fill = "#9ECAE1", size = 2, position = position_nudge(x = -.2))
 
 ## ----m_mpg_brm, results = "hide", message = FALSE, warning = FALSE, cache = TRUE--------------------------------------
@@ -276,37 +278,42 @@ m_mpg = brm(
   file = "models/tidy-brms_m_mpg.rds"  # cache model (can be removed)
 )
 
-## ----fig.width = med_width, fig.height = small_height-----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 51)) %>%
-  add_fitted_draws(m_mpg) %>%
+  add_epred_draws(m_mpg) %>%
   ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-  stat_lineribbon(aes(y = .value)) +
+  stat_lineribbon(aes(y = .epred)) +
   geom_point(data = mtcars) +
   scale_fill_brewer(palette = "Greys") +
   scale_color_brewer(palette = "Set2")
 
-## ----fig.width = med_width, fig.height = small_height-----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
-  add_fitted_draws(m_mpg, n = 100) %>%
+  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
+  # ONLY do this IF you are planning to make spaghetti plots, etc.
+  # NEVER subsample to a small sample to plot intervals, densities, etc.
+  add_epred_draws(m_mpg, ndraws = 100) %>%
   ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-  geom_line(aes(y = .value, group = paste(cyl, .draw)), alpha = .1) +
+  geom_line(aes(y = .epred, group = paste(cyl, .draw)), alpha = .1) +
   geom_point(data = mtcars) +
   scale_color_brewer(palette = "Dark2")
 
 ## ---------------------------------------------------------------------------------------------------------------------
 set.seed(123456)
-ndraws = 50
+# NOTE: using a small number of draws to keep this example
+# small, but in practice you probably want 50 or 100
+ndraws = 20
 
 p = mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
-  add_fitted_draws(m_mpg, n = ndraws) %>%
+  add_epred_draws(m_mpg, ndraws = ndraws) %>%
   ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-  geom_line(aes(y = .value, group = paste(cyl, .draw))) +
+  geom_line(aes(y = .epred, group = paste(cyl, .draw))) +
   geom_point(data = mtcars) +
   scale_color_brewer(palette = "Dark2") +
   transition_states(.draw, 0, 1) +
@@ -314,7 +321,7 @@ p = mtcars %>%
 
 animate(p, nframes = ndraws, fps = 2.5, width = 432, height = 288, res = 96, dev = "png", type = "cairo")
 
-## ----fig.width = med_width, fig.height = small_height-----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
@@ -325,7 +332,7 @@ mtcars %>%
   scale_fill_brewer(palette = "Set2") +
   scale_color_brewer(palette = "Dark2")
 
-## ----fig.width = med_width, fig.height = small_height-----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
@@ -347,7 +354,7 @@ AB %>%
   ggplot(aes(x = response, y = group)) +
   geom_point()
 
-## ----m_ab_brm, cache = TRUE-------------------------------------------------------------------------------------------
+## ----m_ab_brm, results = "hide", message = FALSE, cache = TRUE--------------------------------------------------------
 m_ab = brm(
   bf(
     response ~ group,
@@ -358,40 +365,31 @@ m_ab = brm(
   file = "models/tidy-brms_m_ab.rds"  # cache model (can be removed)
 )
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 grid = AB %>%
   data_grid(group)
 
-fits = grid %>%
-  add_fitted_draws(m_ab)
+means = grid %>%
+  add_epred_draws(m_ab)
 
 preds = grid %>%
   add_predicted_draws(m_ab)
 
 AB %>%
   ggplot(aes(x = response, y = group)) +
-  stat_halfeye(aes(x = .value), scale = 0.6, position = position_nudge(y = 0.175), data = fits) +
+  stat_halfeye(aes(x = .epred), scale = 0.6, position = position_nudge(y = 0.175), data = means) +
   stat_interval(aes(x = .prediction), data = preds) +
   geom_point(data = AB) +
   scale_color_brewer()
 
-## ----fig.width = small_width, fig.height = tiny_height----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 grid %>%
-  add_fitted_draws(m_ab, dpar = TRUE) %>%
+  add_epred_draws(m_ab, dpar = TRUE) %>%
   ggplot(aes(x = sigma, y = group)) +
   stat_halfeye() +
   geom_vline(xintercept = 0, linetype = "dashed")
 
-## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
-#N.B. the syntax for compare_levels is experimental and may change
-m %>%
-  spread_draws(r_condition[condition,]) %>%
-  compare_levels(r_condition, by = condition) %>%
-  ggplot(aes(y = condition, x = r_condition)) +
-  stat_halfeye()
-
-## ----fig.width = small_width, fig.height = small_height---------------------------------------------------------------
-#N.B. the syntax for compare_levels is experimental and may change
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(r_condition[condition,]) %>%
   compare_levels(r_condition, by = condition) %>%
@@ -407,7 +405,7 @@ mtcars_clean = mtcars %>%
 
 head(mtcars_clean)
 
-## ----m_cyl_brm, cache = TRUE------------------------------------------------------------------------------------------
+## ----m_cyl_brm, results = "hide", message = FALSE, cache = TRUE-------------------------------------------------------
 m_cyl = brm(
   cyl ~ mpg, 
   data = mtcars_clean, 
@@ -419,18 +417,8 @@ m_cyl = brm(
 
 ## ---------------------------------------------------------------------------------------------------------------------
 tibble(mpg = 21) %>%
-  add_fitted_draws(m_cyl) %>%
-  median_qi(.value)
-
-## ---------------------------------------------------------------------------------------------------------------------
-tibble(mpg = 21) %>%
-  add_fitted_draws(m_cyl) %>%
-  
-  # recover original factor labels
-  mutate(cyl = levels(mtcars_clean$cyl)[.category]) %>%
-  group_by(cyl, .add = TRUE) %>%
-  
-  median_qi(.value)
+  add_epred_draws(m_cyl) %>%
+  median_qi(.epred)
 
 ## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
 data_plot = mtcars_clean %>%
@@ -440,9 +428,7 @@ data_plot = mtcars_clean %>%
 
 fit_plot = mtcars_clean %>%
   data_grid(mpg = seq_range(mpg, n = 101)) %>%
-  add_fitted_draws(m_cyl, value = "P(cyl | mpg)") %>%
-  # recover original factor labels
-  mutate(cyl = levels(mtcars_clean$cyl)[.category]) %>%
+  add_epred_draws(m_cyl, value = "P(cyl | mpg)", category = "cyl") %>%
   ggplot(aes(x = mpg, y = `P(cyl | mpg)`, color = cyl)) +
   stat_lineribbon(aes(fill = cyl), alpha = 1/5) +
   scale_color_brewer(palette = "Dark2") +
@@ -454,13 +440,13 @@ plot_grid(ncol = 1, align = "v",
 )
 
 ## ---------------------------------------------------------------------------------------------------------------------
-ndraws = 50
+# NOTE: using a small number of draws to keep this example
+# small, but in practice you probably want 50 or 100
+ndraws = 20
 
 p = mtcars_clean %>%
   data_grid(mpg = seq_range(mpg, n = 101)) %>%
-  add_fitted_draws(m_cyl, value = "P(cyl | mpg)") %>%
-  # recover original factor labels
-  mutate(cyl = levels(mtcars_clean$cyl)[.category]) %>%
+  add_epred_draws(m_cyl, value = "P(cyl | mpg)", category = "cyl") %>%
   ggplot(aes(x = mpg, y = `P(cyl | mpg)`, color = cyl)) +
   # we remove the `.draw` column from the data for stat_lineribbon so that the same ribbons
   # are drawn on every frame (since we use .draw to determine the transitions below)
@@ -474,11 +460,9 @@ p = mtcars_clean %>%
 
 animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 192, res = 96, dev = "png", type = "cairo")
 
-## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 tibble(mpg = 20) %>%
-  add_fitted_draws(m_cyl, value = "P(cyl | mpg = 20)") %>%
-  # recover original factor labels
-  mutate(cyl = levels(mtcars_clean$cyl)[.category]) %>%
+  add_epred_draws(m_cyl, value = "P(cyl | mpg = 20)", category = "cyl") %>%
   ungroup() %>%
   select(.draw, cyl, `P(cyl | mpg = 20)`) %>%
   gather_pairs(cyl, `P(cyl | mpg = 20)`, triangle = "both") %>%
@@ -497,12 +481,14 @@ label_data_function = . %>%
 
 data_plot_with_mean = mtcars_clean %>%
   data_grid(mpg = seq_range(mpg, n = 101)) %>%
-  add_fitted_draws(m_cyl, value = "P(cyl | mpg)", n = 100) %>%
-  # recover original factor labels (and convert into numbers)
-  mutate(cyl = as.numeric(levels(mtcars_clean$cyl)[.category])) %>%
+  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
+  # ONLY do this IF you are planning to make spaghetti plots, etc.
+  # NEVER subsample to a small sample to plot intervals, densities, etc.
+  add_epred_draws(m_cyl, value = "P(cyl | mpg)", category = "cyl", ndraws = 100) %>%
   group_by(mpg, .draw) %>%
   # calculate expected cylinder value
-  summarise(cyl = sum(cyl * `P(cyl | mpg)`)) %>%
+  mutate(cyl = as.numeric(as.character(cyl))) %>%
+  summarise(cyl = sum(cyl * `P(cyl | mpg)`), .groups = "drop") %>%
   ggplot(aes(x = mpg, y = cyl)) +
   geom_line(aes(group = .draw), alpha = 5/100) +
   geom_point(aes(y = as.numeric(as.character(cyl)), fill = cyl), data = mtcars_clean, shape = 21, size = 2) +
@@ -538,10 +524,10 @@ mtcars_clean %>%
     label.size = NA, segment.color = "gray35"
   )
 
-## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 mtcars_clean %>%
   select(mpg) %>%
-  add_predicted_draws(m_cyl, n = 100, seed = 12345) %>%
+  add_predicted_draws(m_cyl, ndraws = 100, seed = 12345) %>%
   # recover original factor labels
   mutate(cyl = levels(mtcars_clean$cyl)[.prediction]) %>%
   ggplot(aes(x = cyl)) +
@@ -552,7 +538,7 @@ mtcars_clean %>%
   geom_label(data = data.frame(cyl = "8"), y = 14, label = "observed\ndata",
     hjust = 0, color = "red", lineheight = 1, label.size = NA)
 
-## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 set.seed(12345)
 
 mtcars_clean %>%
@@ -575,7 +561,7 @@ mtcars_clean %>%
   xlab("Number of observations with cyl = col") +
   ylab("Number of observations with cyl = row") 
 
-## ----m_esoph_brm, cache = TRUE----------------------------------------------------------------------------------------
+## ----m_esoph_brm, results = "hide", message = FALSE, cache = TRUE-----------------------------------------------------
 data(esoph)
 m_esoph_brm = brm(
   tobgp ~ agegp, 
@@ -585,22 +571,20 @@ m_esoph_brm = brm(
   file = "models/tidy-brms_m_esoph_brm.rds"  
 )
 
-## ----fig.width = med_width, fig.height = med_height-------------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 esoph %>%
   data_grid(agegp) %>%
-  add_fitted_draws(m_esoph_brm, dpar = TRUE) %>%
-  mutate(tobgp = levels(esoph$tobgp)[.category]) %>%
-  ggplot(aes(x = agegp, y = .value, color = tobgp)) +
+  add_epred_draws(m_esoph_brm, dpar = TRUE, category = "tobgp") %>%
+  ggplot(aes(x = agegp, y = .epred, color = tobgp)) +
   stat_pointinterval(position = position_dodge(width = .4)) +
-  scale_size_continuous(guide = FALSE) +
+  scale_size_continuous(guide = "none") +
   scale_color_manual(values = brewer.pal(6, "Blues")[-c(1,2)])
 
-## ----fig.width = large_width, fig.height = large_height/2-------------------------------------------------------------
+## ----fig.width = med_width, fig.height = med_height/2-----------------------------------------------------------------
 esoph_plot = esoph %>%
   data_grid(agegp) %>%
-  add_fitted_draws(m_esoph_brm) %>%
-  mutate(tobgp = levels(esoph$tobgp)[.category]) %>%
-  ggplot(aes(x = .value, y = tobgp)) +
+  add_epred_draws(m_esoph_brm, category = "tobgp") %>%
+  ggplot(aes(x = .epred, y = tobgp)) +
   coord_cartesian(expand = FALSE) +
   facet_grid(. ~ agegp, switch = "x") +
   theme_classic() +
@@ -609,10 +593,10 @@ esoph_plot = esoph %>%
   xlab("age group")
 
 esoph_plot +
-  stat_summary(fun = median, geom = "bar", fill = "gray75", width = 1, color = "white") +
+  stat_summary(fun = median, geom = "bar", fill = "gray65", width = 1, color = "white") +
   stat_pointinterval()
 
-## ----fig.width = large_width, fig.height = large_height/2-------------------------------------------------------------
+## ----fig.width = med_width, fig.height = med_height/2-----------------------------------------------------------------
 esoph_plot +
   stat_ccdfinterval() +
   expand_limits(x = 0) #ensure bars go to 0

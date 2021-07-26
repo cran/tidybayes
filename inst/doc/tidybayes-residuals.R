@@ -2,16 +2,19 @@ params <-
 list(EVAL = TRUE)
 
 ## ----chunk_options, include=FALSE-------------------------------------------------------------------------------------
-# if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
-tiny_width = small_width = med_width = 6.75
-tiny_height = small_height = med_height = 4.5
-large_width = 8; large_height = 5.25
-# } else {
-#   tiny_width = 3; tiny_height = 2.5
-#   small_width = 4.5; small_height = 3
-#   med_width = 5; med_height = 3.5
-#   large_width = 7; large_height = 4.5
-# }
+if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
+  tiny_width = small_width = med_width = 6.75
+  tiny_height = small_height = med_height = 4.5
+  large_width = 8
+  large_height = 5.25
+} else {
+  tiny_width = 5.5
+  tiny_height = 3 + 2/3
+  small_width = med_width = 6.75
+  small_height = med_height = 4.5
+  large_width = 8
+  large_height = 5.25
+}
 
 knitr::opts_chunk$set(
   fig.width = small_width,
@@ -49,7 +52,7 @@ theme_set(theme_tidybayes() + panel_border())
 # 2 to build this vignette (but show the previous chunk to
 # the reader as a best pratice example)
 rstan_options(auto_write = TRUE)
-options(mc.cores = min(2, parallel::detectCores()))
+options(mc.cores = 1) #min(2, parallel::detectCores()))
 
 options(width = 120)
 
@@ -111,13 +114,13 @@ m_ideal = brm(
 ## ---------------------------------------------------------------------------------------------------------------------
 m_ideal
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m_ideal) %>%
   ggplot(aes(x = .row, y = .residual)) +
   stat_pointinterval()
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m_ideal) %>%
   median_qi() %>%
@@ -125,12 +128,13 @@ cens_df %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df %>%
   add_predicted_draws(m_ideal) %>%
   summarise(
     p_residual = mean(.prediction < y_star),
-    z_residual = qnorm(p_residual)
+    z_residual = qnorm(p_residual),
+    .groups = "drop_last"
   ) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
@@ -147,13 +151,13 @@ m = brm(
 ## ---------------------------------------------------------------------------------------------------------------------
 m
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m) %>%
   ggplot(aes(x = .row, y = .residual)) +
   stat_pointinterval()
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m) %>%
   median_qi(.residual) %>%
@@ -161,33 +165,38 @@ cens_df %>%
   geom_qq() +
   geom_qq_line()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df %>%
   add_predicted_draws(m) %>%
   summarise(
     p_lower = mean(.prediction < y_lower),
     p_upper = mean(.prediction < y_upper),
     p_residual = runif(1, p_lower, p_upper),
-    z_residual = qnorm(p_residual)
+    z_residual = qnorm(p_residual),
+    .groups = "drop_last"
   ) %>%
   ggplot(aes(x = .row, y = z_residual)) +
   geom_point()
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df %>%
   add_predicted_draws(m) %>%
   summarise(
     p_lower = mean(.prediction < y_lower),
     p_upper = mean(.prediction < y_upper),
     p_residual = runif(1, p_lower, p_upper),
-    z_residual = qnorm(p_residual)
+    z_residual = qnorm(p_residual),
+    .groups = "drop_last"
   ) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
   geom_abline()
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
-k = 20
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+# NOTE: ordinarily I would use a large number of frames (k), 
+# say 50 or 100, but I am keeping it small for the sake of 
+# keeping these examples small
+k = 10
 
 p = cens_df %>%
   add_predicted_draws(m) %>%
@@ -195,7 +204,8 @@ p = cens_df %>%
     p_lower = mean(.prediction < y_lower),
     p_upper = mean(.prediction < y_upper),
     p_residual = list(runif(k, p_lower, p_upper)),
-    residual_draw = list(1:k)
+    residual_draw = list(1:k),
+    .groups = "drop_last"
   ) %>%
   unnest(c(p_residual, residual_draw)) %>%
   mutate(z_residual = qnorm(p_residual)) %>%
@@ -218,7 +228,7 @@ cens_df_t =
     censoring = "interval"
   )
 
-## ---- fig.width = med_height, fig.height = med_width------------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_width----------------------------------------------------------------
 uncensored_plot = cens_df_t %>%
   ggplot(aes(y = "", x = y)) +
   stat_slab() +
@@ -257,7 +267,7 @@ m_t1 = brm(
   file = "models/tidybayes-residuals_m_t1"  # cache model (can be removed)
 )
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df_t %>%
   add_residual_draws(m_t1) %>%
   median_qi(.residual) %>%
@@ -265,14 +275,15 @@ cens_df_t %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df_t %>%
   add_predicted_draws(m_t1) %>%
   summarise(
     p_lower = mean(.prediction < y_lower),
     p_upper = mean(.prediction < y_upper),
     p_residual = runif(1, p_lower, p_upper),
-    z_residual = qnorm(p_residual)
+    z_residual = qnorm(p_residual),
+    .groups = "drop_last"
   ) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
@@ -287,7 +298,7 @@ m_t2 = brm(
   file = "models/tidybayes-residuals_m_t2.rds"  # cache model (can be removed)
 )
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df_t %>%
   add_residual_draws(m_t2) %>%
   median_qi(.residual) %>%
@@ -295,25 +306,19 @@ cens_df_t %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
-k = 20
-
-p = cens_df_t %>%
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+cens_df_t %>%
   add_predicted_draws(m_t2) %>%
   summarise(
     p_lower = mean(.prediction < y_lower),
     p_upper = mean(.prediction < y_upper),
-    p_residual = list(runif(k, p_lower, p_upper)),
-    residual_draw = list(1:k)
+    p_residual = runif(1, p_lower, p_upper),
+    z_residual = qnorm(p_residual),
+    .groups = "drop_last"
   ) %>%
-  unnest(c(p_residual, residual_draw)) %>%
-  mutate(z_residual = qnorm(p_residual)) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
-  geom_abline() +
-  transition_manual(residual_draw)
-
-animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
+  geom_abline()
 
 ## ---------------------------------------------------------------------------------------------------------------------
 cens_df_o = cens_df_t %>%
@@ -338,7 +343,7 @@ cens_df_o %>%
   geom_qq() +
   geom_qq_line()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 cens_df_o %>%
   add_predicted_draws(m_o) %>%
   mutate(.prediction = ordered(levels(y_factor)[.prediction], levels = levels(y_factor))) %>%
@@ -346,31 +351,12 @@ cens_df_o %>%
     p_lower = mean(.prediction < y_factor),
     p_upper = mean(.prediction <= y_factor),
     p_residual = runif(1, p_lower, p_upper),
-    z_residual = qnorm(p_residual)
+    z_residual = qnorm(p_residual),
+    .groups = "drop_last"
   ) %>%
-  ggplot(aes(x = .row, y = z_residual)) +
-  geom_point()
-
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
-k = 20
-
-p = cens_df_o %>%
-  add_predicted_draws(m_o) %>%
-  mutate(.prediction = ordered(levels(y_factor)[.prediction], levels = levels(y_factor))) %>%
-  summarise(
-    p_lower = mean(.prediction < y_factor),
-    p_upper = mean(.prediction <= y_factor),
-    p_residual = list(runif(k, p_lower, p_upper)),
-    residual_draw = list(1:k)
-  ) %>%
-  unnest(c(p_residual, residual_draw)) %>%
-  mutate(z_residual = qnorm(p_residual)) %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
-  geom_abline() +
-  transition_manual(residual_draw)
-
-animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
+  geom_abline()
 
 ## ---------------------------------------------------------------------------------------------------------------------
 library(rlang)
@@ -387,13 +373,15 @@ make_probability_residuals = function(data, prediction, y, y_upper = NA, n = 1) 
     #no y_upper provided, use y as y_upper
     data = summarise(data,
       .p_lower = mean(!!.prediction < !!.y),
-      .p_upper = mean(!!.prediction <= !!.y)
+      .p_upper = mean(!!.prediction <= !!.y),
+      .groups = "drop_last"
     )
   } else {
     #y_upper should be a vector, and if an entry in it is NA, use the entry from y
     data = summarise(data,
       .p_lower = mean(!!.prediction < !!.y),
-      .p_upper = mean(!!.prediction <= ifelse(is.na(!!.y_upper), !!.y, !!.y_upper))
+      .p_upper = mean(!!.prediction <= ifelse(is.na(!!.y_upper), !!.y, !!.y_upper)),
+      .groups = "drop_last"
     )
   }
   
@@ -422,7 +410,7 @@ m_bin = brm(
   file = "models/tidybayes-residuals_m_bin.rds"  # cache model (can be removed)
 )
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
 bin_df %>%
   add_residual_draws(m_bin) %>%
   median_qi() %>%
@@ -430,8 +418,11 @@ bin_df %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = small_width, fig.height = small_width---------------------------------------------------------------
-k = 20
+## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+# NOTE: ordinarily I would use a large number of frames (k), 
+# say 50 or 100, but I am keeping it small for the sake of 
+# keeping these examples small
+k = 10
 
 p = bin_df %>%
   add_predicted_draws(m_bin) %>%

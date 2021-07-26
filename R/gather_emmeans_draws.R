@@ -70,7 +70,8 @@
 #'   m %>%
 #'     emmeans(~ condition) %>%
 #'     gather_emmeans_draws() %>%
-#'     median_qi()
+#'     median_qi() %>%
+#'     print()
 #'
 #'   # or we could get pairwise differences:
 #'   m %>%
@@ -84,7 +85,6 @@
 #' }
 #' }
 #' @importFrom magrittr %>%
-#' @importFrom purrr map_dfr
 #' @importFrom tibble as_tibble
 #' @importFrom rlang syms
 #' @export
@@ -99,7 +99,7 @@ gather_emmeans_draws.default = function(object, value = ".value", ...) {
   # where mat[, i] is the posterior distribution for grid[i, ]
   mat = object@post.beta %*% t(object@linfct)
 
-  draws = map_dfr(seq_len(nrow(grid)), function(i) {
+  draws = map_dfr_(seq_len(nrow(grid)), function(i) {
     post = as.vector(mat[, i])
     if (!is.null(offset <- object@grid[i, ".offset."])) {
       post = post + offset
@@ -120,12 +120,15 @@ gather_emmeans_draws.default = function(object, value = ".value", ...) {
     group_by_at(setdiff(names(.), c(".chain", ".iteration", ".draw", value)))
 }
 
+#' @importFrom dplyr mutate_if
 #' @rdname gather_emmeans_draws
 #' @export
 gather_emmeans_draws.emm_list = function(object, value = ".value", grid = ".grid", ...) {
-  list_of_draw_tibbles = map(object, gather_emmeans_draws, value = value, ...)
-  group_names = map(list_of_draw_tibbles, group_vars) %>%
-    reduce(union)
+  # lapply does not work properly on raw emm_list objects, hence the need for
+  # unclass() here, which makes object a list of emmGrids
+  list_of_draw_tibbles = lapply(unclass(object), gather_emmeans_draws, value = value, ...)
+  group_names = lapply(list_of_draw_tibbles, group_vars) %>%
+    reduce_(union)
 
   list_of_draw_tibbles %>%
     # bind_rows on a tibble throws irrelevant (in this case) messages about
@@ -133,8 +136,8 @@ gather_emmeans_draws.emm_list = function(object, value = ".value", grid = ".grid
     # in all tibbles being merge, which may happen in the case where a `contrast`
     # column is output from one emmeans grid but not another. So we'll avoid
     # that by converting factor columns to characters first
-    map(ungroup) %>%
-    map(mutate_if, is.factor, as.character) %>%
+    lapply(ungroup) %>%
+    lapply(mutate_if, is.factor, as.character) %>%
     bind_rows(.id = grid) %>%
     group_by_at(c(group_names, grid))
 }

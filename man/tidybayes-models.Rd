@@ -11,20 +11,25 @@ do not.
 
 
 \strong{All supported models/formats} support the base tidybayes sample extraction functions, such as
-\code{\link[=tidy_draws]{tidy_draws()}}, \code{\link[=spread_draws]{spread_draws()}}, and \code{\link[=gather_draws]{gather_draws()}}. These models/formats include:
+\code{\link[=tidy_draws]{tidy_draws()}}, \code{\link[=spread_draws]{spread_draws()}}, \code{\link[=gather_draws]{gather_draws()}}, \code{\link[=spread_rvars]{spread_rvars()}}, and \code{\link[=gather_rvars]{gather_rvars()}}.
+These models/formats include:
 
 \itemize{
 \item \link[rstan:stan]{rstan} models
+\item \href{https://mc-stan.org/cmdstanr/}{cmdstanr} models
 \item \code{\link[brms:brm]{brms::brm()}} models
 \item \link[rstanarm:rstanarm-package]{rstanarm} models
-\item \code{\link[runjags:runjags]{runjags::runjags()}} models
+\item \code{\link[runjags:runjags-package]{runjags::runjags()}} models
 \item \code{\link[rjags:jags.model]{rjags::jags.model()}} models, if sampled using \code{\link[rjags:coda.samples]{rjags::coda.samples()}}
 \item \code{\link[jagsUI:jags]{jagsUI::jags()}} models
 \item \code{\link[MCMCglmm:MCMCglmm]{MCMCglmm::MCMCglmm()}} models
 \item \code{\link[coda:mcmc]{coda::mcmc()}} and \code{\link[coda:mcmc.list]{coda::mcmc.list()}} objects, which are output by several model
 types.
-\item Any object with an implementation of \code{\link[coda:mcmc.list]{coda::as.mcmc.list()}}. For a list of those available in your
-environment, run \code{methods(as.mcmc.list)}
+\item \link[posterior:draws]{posterior::draws} objects
+\item Any object with an implementation of \code{\link[posterior:draws_df]{posterior::as_draws_df()}} or \code{\link[posterior:draws]{posterior::as_draws()}}.
+For a list of those available in your environment, run \code{methods(as_draws_df)} or \code{methods(as_draws)}
+\item Any object with an implementation of \code{\link[coda:mcmc.list]{coda::as.mcmc.list()}}.
+For a list of those available in your environment, run \code{methods(as.mcmc.list)}
 }
 
 If you install the \href{https://mjskay.github.io/tidybayes.rethinking/}{tidybayes.rethinking} package, models from
@@ -35,15 +40,21 @@ the \href{https://github.com/rmcelreath/rethinking}{rethinking} package are also
 
 
 In addition, the \strong{following models support fit and prediction} extraction functions, such as
-\code{\link[=add_fitted_draws]{add_fitted_draws()}} and \code{\link[=add_predicted_draws]{add_predicted_draws()}}:
+\code{\link[=add_epred_draws]{add_epred_draws()}}, \code{\link[=add_predicted_draws]{add_predicted_draws()}}, \code{\link[=add_linpred_draws]{add_linpred_draws()}}, \code{\link[=add_epred_rvars]{add_epred_rvars()}},
+\code{\link[=add_predicted_rvars]{add_predicted_rvars()}}, and \code{\link[=add_linpred_rvars]{add_linpred_rvars()}}:
 
 \itemize{
 \item \code{\link[brms:brm]{brms::brm()}} models
 \item \link[rstanarm:rstanarm-package]{rstanarm} models
+\item any package with implementations of \code{\link[rstantools:posterior_epred]{rstantools::posterior_epred()}},
+\code{\link[rstantools:posterior_predict]{rstantools::posterior_predict()}}, or \code{\link[rstantools:posterior_linpred]{rstantools::posterior_linpred()}} that
+include an argument called \code{newdata} which takes a data frame of predictors.
 }
 
 \strong{If your model type is not in the above list}, you may still be able to use the \code{\link[=add_draws]{add_draws()}}
-function to turn matrices of predictive draws (or fit draws) into tidy data frames.
+function to turn matrices of predictive draws (or fit draws) into tidy data frames. Or,
+you can wrap output from a prediction function in \code{posterior::rvar()} and add it
+to a data frame so long as that output is a matrix with draws as rows.
 
 If you install the \href{https://mjskay.github.io/tidybayes.rethinking/}{tidybayes.rethinking} package, models from
 the \href{https://github.com/rmcelreath/rethinking}{rethinking} package are also supported.
@@ -53,9 +64,13 @@ the \href{https://github.com/rmcelreath/rethinking}{rethinking} package are also
 
 
 To include basic support for new models, one need only implement the \code{\link[=tidy_draws]{tidy_draws()}} generic function
-for that model.
+for that model. Alternatively, objects that support \code{\link[posterior:draws]{posterior::as_draws()}} or \code{\link[coda:mcmc.list]{coda::as.mcmc.list()}}
+will automatically be supported by \code{\link[=tidy_draws]{tidy_draws()}}.
 
-To include support for estimation and prediction, one must implement the \code{\link[=fitted_draws]{fitted_draws()}} and
-\code{\link[=predicted_draws]{predicted_draws()}} generic functions.
+To include support for estimation and prediction, one must either implement the \code{\link[=epred_draws]{epred_draws()}},
+\code{\link[=predicted_draws]{predicted_draws()}}, and \code{\link[=linpred_draws]{linpred_draws()}} functions or their correspond functions from
+\pkg{rstantools}: \code{\link[rstantools:posterior_epred]{rstantools::posterior_epred()}}, \code{\link[rstantools:posterior_predict]{rstantools::posterior_predict()}}, and
+\code{\link[rstantools:posterior_linpred]{rstantools::posterior_linpred()}}. If you take the latter approach, you should include
+\code{newdata} and \code{ndraws} arguments that work as documented in \code{predicted_draws()}.
 }
 

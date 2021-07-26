@@ -24,7 +24,8 @@ group will be ignored, as it is not possible to make comparisons both
 within some variable and across it simultaneously).}
 
 \item{variable}{Bare (unquoted) name of a column in data representing the
-variable to compare across levels.}
+variable to compare across levels. Can be a numeric variable (as in
+long-data-frame-of-draws format) or a \code{\link[posterior:rvar]{posterior::rvar}}.}
 
 \item{by}{Bare (unquoted) name of a column in data that is a
 \code{factor} or \code{ordered}. The value of \code{variable} will be
@@ -64,7 +65,7 @@ value.}
 
 \item{ignore_groups}{character vector of names of groups to ignore by
 default in the input grouping. This is primarily provided to make it
-easier to pipe output of \code{\link[=add_fitted_draws]{add_fitted_draws()}} into this function,
+easier to pipe output of \code{\link[=add_epred_draws]{add_epred_draws()}} into this function,
 as that function provides a \code{".row"} output column that is grouped,
 but which is virtually never desired to group by when using \code{compare_levels}.}
 }

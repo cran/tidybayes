@@ -24,16 +24,19 @@ img {
 </style>
 
 ```{r chunk_options, include=FALSE}
-# if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
-tiny_width = small_width = med_width = 6.75
-tiny_height = small_height = med_height = 4.5
-large_width = 8; large_height = 5.25
-# } else {
-#   tiny_width = 3; tiny_height = 2.5
-#   small_width = 4.5; small_height = 3
-#   med_width = 5; med_height = 3.5
-#   large_width = 7; large_height = 4.5
-# }
+if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
+  tiny_width = small_width = med_width = 6.75
+  tiny_height = small_height = med_height = 4.5
+  large_width = 8
+  large_height = 5.25
+} else {
+  tiny_width = 5.5
+  tiny_height = 3 + 2/3
+  small_width = med_width = 6.75
+  small_height = med_height = 4.5
+  large_width = 8
+  large_height = 5.25
+}
 
 knitr::opts_chunk$set(
   fig.width = small_width,
@@ -74,12 +77,14 @@ There are a few core ideas that run through the `tidybayes` API that should (hop
 
 `tidybayes` aims to support a variety of models with a uniform interface. Currently supported models include 
 [rstan](https://cran.r-project.org/package=rstan),
+[cmdstanr](https://mc-stan.org/cmdstanr/),
 [brms](https://cran.r-project.org/package=brms), 
 [rstanarm](https://cran.r-project.org/package=rstanarm), 
 [runjags](https://cran.r-project.org/package=runjags),
 [rjags](https://cran.r-project.org/package=rjags), 
 [jagsUI](https://cran.r-project.org/package=jagsUI), 
 [coda::mcmc and coda::mcmc.list](https://cran.r-project.org/package=coda),
+[posterior::draws](https://mc-stan.org/posterior/),
 [MCMCglmm](https://cran.r-project.org/package=MCMCglmm), 
 and anything with its own `as.mcmc.list` implementation. If you install the [tidybayes.rethinking](https://mjskay.github.io/tidybayes.rethinking/) package, models from the [rethinking](https://github.com/rmcelreath/rethinking) package are also supported.
 
@@ -124,7 +129,7 @@ options(mc.cores = parallel::detectCores())
 # 2 to build this vignette (but show the previous chunk to
 # the reader as a best pratice example)
 rstan_options(auto_write = TRUE)
-options(mc.cores = min(2, parallel::detectCores()))
+options(mc.cores = 1) #min(2, parallel::detectCores()))
 
 options(width = 120)
 ```
@@ -211,14 +216,14 @@ compose_data(ABC)
 
 This makes it easy to skip right to running the model without munging the data yourself:
 
-```{r}
-m = sampling(ABC_stan, data = compose_data(ABC), control = list(adapt_delta=0.99))
+```{r message = FALSE, results = 'hide'}
+m = sampling(ABC_stan, data = compose_data(ABC), control = list(adapt_delta = 0.99))
 ```
 
 The results look like this:
 
 ```{r}
-print(m, pars = c("overall_mean", "condition_mean_sd", "condition_mean", "response_sd"))
+m
 ```
 
 
@@ -316,23 +321,22 @@ m %>%
 
 When given only a single column, `median_qi` will use the names `.lower` and `.upper` for the lower and upper ends of the intervals.
 
+`tidybayes` also provides an implementation of `posterior::summarise_draws()` for
+grouped data frames (`tidybayes::summaries_draws.grouped_df()`), which you can
+use to quickly get convergence diagnostics:
+
+```{r}
+m %>%
+  spread_draws(condition_mean[condition]) %>%
+  summarise_draws()
+```
+
+
 ## Plotting points and intervals
 
 ### Using `geom_pointinterval`
 
-Plotting medians and intervals is straightforward using `ggdist::geom_pointinterval()`, which is similar to `ggplot2::geom_pointrange()` but with sensible defaults for multiple intervals (functionality we will use later):
-
-```{r fig.width = tiny_width, fig.height = tiny_height}
-m %>%
-  spread_draws(condition_mean[condition]) %>%
-  median_qi() %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointinterval()
-```
-
-### Using `stat_pointinterval``
-
-Rather than summarizing the posterior before calling ggplot, we could also use `ggdist::stat_pointinterval()` to perform the summary within ggplot:
+Plotting medians and intervals is straightforward using `ggdist::geom_pointinterval()` or `ggdist::stat_pointinterval()`, which are similar to `ggplot2::geom_pointrange()` but with sensible defaults for multiple intervals. For example:
 
 ```{r fig.width = tiny_width, fig.height = tiny_height}
 m %>%
@@ -345,20 +349,9 @@ These functions have `.width = c(.66, .95)` by default (showing 66% and 95% inte
 
 ### Intervals with posterior violins ("eye plots"): `stat_eye`
 
-The `ggdist::stat_eye()` geom provides a shortcut to generating "eye plots" (combinations of intervals and densities, drawn as violin plots):
+The `ggdist::stat_halfeye()` geom provides a shortcut to generating "half-eye plots" (combinations of intervals and densities). This example also demonstrates how to change the interval probability (here, to 90% and 50% intervals):
 
-```{r fig.width = small_width, fig.height = tiny_height}
-m %>%
-  spread_draws(condition_mean[condition]) %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
-  stat_eye()
-```
-
-### Intervals with posterior densities ("half-eye plots"): `stat_halfeye`
-
-If you prefer densities over violins, you can use `ggdist::stat_halfeye()`. This example also demonstrates how to change the interval probability (here, to 90% and 50% intervals):
-
-```{r fig.width = small_width, fig.height = tiny_height}
+```{r fig.width = tiny_width, fig.height = tiny_height}
 m %>%
   spread_draws(condition_mean[condition]) %>%
   ggplot(aes(y = fct_rev(condition), x = condition_mean)) +
@@ -367,7 +360,7 @@ m %>%
 
 Or say you want to annotate portions of the densities in color; the `fill` aesthetic can vary within a slab in all geoms and stats in the `ggdist::geom_slabinterval()` family, including `ggdist::stat_halfeye()`. For example, if you want to annotate a domain-specific region of practical equivalence (ROPE), you could do something like this:
 
-```{r fig.width = small_width, fig.height = tiny_height}
+```{r fig.width = tiny_width, fig.height = tiny_height}
 m %>%
   spread_draws(condition_mean[condition]) %>%
   ggplot(aes(y = fct_rev(condition), x = condition_mean, fill = stat(abs(x) < .8))) +
@@ -386,7 +379,9 @@ See `vignette("slabinterval", package = "ggdist")` for an overview.
 
 ### Intervals with multiple probability levels: the `.width =` argument
 
-`median_qi()` and its sister functions can also produce an arbitrary number of probability intervals by setting the `.width =` argument:
+If you wish to summarise the data before plotting (sometimes useful for
+large samples), `median_qi()` and its sister functions can also produce an 
+arbitrary number of probability intervals by setting the `.width =` argument:
 
 ```{r}
 m %>%
@@ -400,31 +395,18 @@ The results are in a tidy format: one row per index (`condition`) and probabilit
 m %>%
   spread_draws(condition_mean[condition]) %>%
   median_qi(.width = c(.95, .66)) %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper,
-    size = -.width)) +               # smaller probability interval => thicker line
+  ggplot(aes(
+    y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper,
+    # size = -.width means smaller probability interval => thicker line
+    # this can be omitted, geom_pointinterval includes it automatically
+    # if a .width column is in the input data.
+    size = -.width
+  )) +  
   geom_pointinterval()
 ```
 
 `ggdist::geom_pointinterval()` includes 
-`size = -.width` as a default aesthetic mapping to facilitate exactly this usage. This, the above can be simplified to:
-
-```{r fig.width = tiny_width, fig.height = tiny_height}
-m %>%
-  spread_draws(condition_mean[condition]) %>%
-  median_qi(.width = c(.95, .66)) %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointinterval()
-```
-
-Just as the `point_interval()` functions can generate an arbitrary number of intervals per distribution, so too can `ggdist::geom_pointinterval()` draw an arbitrary number of intervals, though in most cases this starts to get pretty silly (and will require the use of `interval_size_range =`, which determines the minimum and maximum line thickness, to make it legible). Here it is with 3:
-
-```{r fig.width = small_width, fig.height = tiny_height}
-m %>%
-  spread_draws(condition_mean[condition]) %>%
-  median_qi(.width = c(.95, .8, .5)) %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean, xmin = .lower, xmax = .upper)) +
-  geom_pointinterval(interval_size_range = c(0.5, 2))
-```
+`size = -.width` as a default aesthetic mapping to facilitate exactly this usage.
 
 ### Plotting posteriors as quantile dotplots
 
@@ -432,11 +414,11 @@ Intervals are nice if the alpha level happens to line up with whatever decision 
 
 Within the slabinterval family of geoms in tidybayes is the `dots` and `dotsinterval` family, which automatically determine appropriate bin sizes for dotplots and can calculate quantiles from samples to construct quantile dotplots. `ggdist::stat_dots()` is the variant designed for use on samples:
 
-```{r fig.width = med_width, fig.height = med_height}
+```{r fig.width = tiny_width, fig.height = tiny_height}
 m %>%
   spread_draws(condition_mean[condition]) %>%
   ggplot(aes(x = condition_mean, y = fct_rev(condition))) +
-  stat_dots(quantiles = 100)
+  stat_dotsinterval(quantiles = 100)
 ```
 
 The idea is to get away from thinking about the posterior as indicating one canonical point or interval, but instead to represent it as (say) 100 approximately equally likely points.
@@ -497,19 +479,9 @@ m %>%
 
 ## Posterior predictions
 
-We can use combinations of variables with difference indices to generate predictions from the model. In this case, we can combine the condition means with the residual standard deviation to generate predictive distributions from the model, then show the distributions using `ggdist::stat_slab()`:
+We can use combinations of variables with difference indices to generate predictions from the model. In this case, we can combine the condition means with the residual standard deviation to generate predictive distributions from the model, then show the distributions using `ggdist::stat_interval()` and compare them to the data:
 
-```{r fig.width = small_width, fig.height = tiny_height}
-m %>%
-  spread_draws(condition_mean[condition], response_sd) %>%
-  mutate(y_rep = rnorm(n(), condition_mean, response_sd)) %>%
-  ggplot(aes(y = fct_rev(condition), x = y_rep)) +
-  stat_slab()
-```
-
-And even summarize these as predictive intervals and compare them to the data:
-
-```{r fig.width = small_width, fig.height = tiny_height}
+```{r fig.width = tiny_width, fig.height = tiny_height}
 m %>%
   spread_draws(condition_mean[condition], response_sd) %>%
   mutate(y_rep = rnorm(n(), condition_mean, response_sd)) %>%
@@ -527,7 +499,7 @@ If this model is well-calibrated, about 95% of the data should be within the out
 
 Altogether, data, posterior predictions, and posterior distributions of the means:
 
-```{r fig.width = small_width, fig.height = small_height}
+```{r fig.width = tiny_width, fig.height = tiny_height}
 draws = m %>%
   spread_draws(condition_mean[condition], response_sd)
 
@@ -546,8 +518,7 @@ ABC %>%
 
 `compare_levels()` allows us to compare the value of some variable across levels of some factor. By default it computes all pairwise differences, though this can be changed using the `comparison = ` argument:
 
-```{r fig.width = small_width, fig.height = tiny_height}
-#N.B. the syntax for compare_levels is experimental and may change
+```{r fig.width = tiny_width, fig.height = tiny_height}
 m %>%
   spread_draws(condition_mean[condition]) %>%
   compare_levels(condition_mean, by = condition) %>%
@@ -628,15 +599,15 @@ m_mpg = brm(
 )
 ```
 
-We can draw fit curves with probability bands using `add_fitted_draws()` and `ggdist::stat_lineribbon()`:
+We can draw fit curves with probability bands using `add_epred_draws()` and `ggdist::stat_lineribbon()`:
 
 ```{r}
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 51)) %>%
-  add_fitted_draws(m_mpg) %>%
+  add_epred_draws(m_mpg) %>%
   ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-  stat_lineribbon(aes(y = .value)) +
+  stat_lineribbon(aes(y = .epred)) +
   geom_point(data = mtcars) +
   scale_fill_brewer(palette = "Greys") +
   scale_color_brewer(palette = "Set2")
@@ -648,9 +619,12 @@ Or we can sample a reasonable number of fit lines (say 100) and overplot them:
 mtcars %>%
   group_by(cyl) %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
-  add_fitted_draws(m_mpg, n = 100) %>%
+  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
+  # ONLY do this IF you are planning to make spaghetti plots, etc.
+  # NEVER subsample to a small sample to plot intervals, densities, etc.
+  add_epred_draws(m_mpg, ndraws = 100) %>%
   ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-  geom_line(aes(y = .value, group = paste(cyl, .draw)), alpha = .1) +
+  geom_line(aes(y = .epred, group = paste(cyl, .draw)), alpha = .1) +
   geom_point(data = mtcars) +
   scale_color_brewer(palette = "Dark2")
 ```
@@ -660,7 +634,7 @@ For more examples of fit line uncertainty, see the corresponding sections in `vi
 
 ## Compatibility with other packages
 
-### Compatibility of `point_interval` with `broom::tidy` and `dotwhisker::dwplot`: A model comparison example
+### Compatibility of `point_interval` with `broom::tidy`: A model comparison example
 
 Combining `to_broom_names()` with `median_qi()` (or more generally, the `point_interval()` family of functions) makes it easy to compare results against models supported by `broom::tidy()`. For example, let's compare our model's fits for conditional means against an ordinary least squares (OLS) regression:
 
@@ -693,19 +667,11 @@ bayes_results
 
 Here, `to_broom_names()` will convert `.lower` and `.upper` into `conf.low` and `conf.high` so the names of the columns we need to make the comparison (`condition`, `estimate`, `conf.low`, and `conf.high`) all line up easily. This makes it simple to combine the two tidy data frames together using `bind_rows`, and plot them:
 
-```{r fig.width = small_width, fig.height = tiny_height}
+```{r fig.width = tiny_width, fig.height = tiny_height}
 bind_rows(linear_results, bayes_results) %>%
   mutate(condition = fct_rev(condition)) %>%
   ggplot(aes(y = condition, x = estimate, xmin = conf.low, xmax = conf.high, color = model)) +
   geom_pointinterval(position = position_dodge(width = .3))
-```
-
-Compatibility with `broom::tidy()` also gives compatibility with `dotwhisker::dwplot()`:
-
-```{r warning = FALSE, fig.width = small_width, fig.height = tiny_height}
-bind_rows(linear_results, bayes_results) %>%
-  rename(term = condition) %>%
-  dotwhisker::dwplot()
 ```
 
 Observe the shrinkage towards the overall mean in the Bayesian model compared to the OLS model.
@@ -737,7 +703,7 @@ m %>%
 
 We can pass that into `bayesplot::mcmc_areas()` directly. The `drop_indices = TRUE` argument to `unspread_draws()` indicates that `.chain`, `.iteration`, and `.draw` should not be included in the output:
 
-```{r fig.width = small_width, fig.height = tiny_height}
+```{r fig.width = tiny_width, fig.height = tiny_height}
 m %>%
   spread_draws(condition_mean[condition]) %>%
   compare_levels(condition_mean, by = condition) %>%
@@ -762,7 +728,7 @@ Both `rstanarm` and `brms` behave similarly when used with `emmeans::emmeans()`.
 
 Given this `rstanarm` model:
 
-```{r}
+```{r results = "hide", message = FALSE}
 m_rst = stan_glm(response ~ condition, data = ABC)
 ```
 
@@ -789,7 +755,7 @@ See the documentation for `emmeans::pairwise.emmc()` for a list of the numerous 
 
 As before, we can plot the results instead of using a table:
 
-```{r fig.width = small_width, fig.height = tiny_height}
+```{r fig.width = tiny_width, fig.height = tiny_height}
 m_rst %>%
   emmeans( ~ condition) %>%
   contrast(method = "pairwise") %>%

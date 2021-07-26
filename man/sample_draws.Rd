@@ -4,14 +4,16 @@
 \alias{sample_draws}
 \title{Sample draws from a tidy-format data frame of draws}
 \usage{
-sample_draws(data, n, draw = ".draw")
+sample_draws(data, ndraws, draw = ".draw", seed = NULL)
 }
 \arguments{
 \item{data}{Data frame to sample from}
 
-\item{n}{The number of draws to select}
+\item{ndraws}{The number of draws to return, or \code{NULL} to return all draws.}
 
-\item{draw}{The name of the column indexing the draws}
+\item{draw}{The name of the column indexing the draws; default \code{".draw"}.}
+
+\item{seed}{A seed to use when subsampling draws (i.e. when \code{ndraws} is not \code{NULL}).}
 }
 \description{
 Given a tidy-format data frame of draws with a column indexing each draw, subsample the data frame to a given size
@@ -46,10 +48,12 @@ if (
   mtcars \%>\%
     group_by(cyl) \%>\%
     data_grid(hp = seq_range(hp, n = 101)) \%>\%
-    add_fitted_draws(m_mpg) \%>\%
+    add_epred_draws(m_mpg) \%>\%
+    # NOTE: only use sample_draws here when making spaghetti plots; for
+    # plotting intervals it is always best to use all draws
     sample_draws(100) \%>\%
     ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
-    geom_line(aes(y = .value, group = paste(cyl, .draw)), alpha = 0.25) +
+    geom_line(aes(y = .epred, group = paste(cyl, .draw)), alpha = 0.25) +
     geom_point(data = mtcars)
 }
 }
