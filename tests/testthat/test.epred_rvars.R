@@ -78,10 +78,8 @@ test_that("[add_]epred_rvars works on brms models without dpar", {
 
   #subsetting to test the `ndraws` argument
   set.seed(1234)
-  draw_subset = sample.int(ndraws(ref$.epred), 10)
-  filtered_ref = ref
-  draws_of(filtered_ref$.epred) = draws_of(filtered_ref$.epred)[draw_subset,]
-  dimnames(draws_of(filtered_ref$.epred))[[1]] = 1:10
+  filtered_ref = mtcars_tbl %>%
+    mutate(.epred = rvar(rstantools::posterior_epred(m_hp, newdata = mtcars_tbl, ndraws = 10)))
 
   expect_equal(add_epred_rvars(mtcars_tbl, m_hp, ndraws = 10, seed = 1234), filtered_ref)
 })
@@ -108,15 +106,13 @@ test_that("[add_]epred_rvars works on brms models with dpar", {
 
 
   #subsetting to test the `ndraws` argument
+  filtered_ref = mtcars_tbl
   set.seed(1234)
-  draw_subset = sample.int(ndraws(ref$.epred), 10)
-  filtered_ref = ref
-  draws_of(filtered_ref$.epred) = draws_of(filtered_ref$.epred)[draw_subset,]
-  dimnames(draws_of(filtered_ref$.epred))[[1]] = 1:10
-  draws_of(filtered_ref$mu) = draws_of(filtered_ref$mu)[draw_subset,]
-  dimnames(draws_of(filtered_ref$mu))[[1]] = 1:10
-  draws_of(filtered_ref$sigma) = draws_of(filtered_ref$sigma)[draw_subset,]
-  dimnames(draws_of(filtered_ref$sigma))[[1]] = 1:10
+  filtered_ref$.epred = rvar(rstantools::posterior_epred(m_hp_sigma, newdata = mtcars_tbl, ndraws = 10))
+  set.seed(1234)
+  filtered_ref$mu = rvar(rstantools::posterior_epred(m_hp_sigma, newdata = mtcars_tbl, dpar = "mu", ndraws = 10))
+  set.seed(1234)
+  filtered_ref$sigma = rvar(rstantools::posterior_epred(m_hp_sigma, newdata = mtcars_tbl, dpar = "sigma", ndraws = 10))
 
   expect_equal(add_epred_rvars(mtcars_tbl, m_hp_sigma, ndraws = 10, seed = 1234, dpar = TRUE), filtered_ref)
 })
@@ -205,21 +201,6 @@ test_that("[add_]epred_rvars allows extraction of dpar on brms models with categ
 
 
 # non-generic argument tests ----------------------------------------------
-
-test_that("[add_]epred_rvars throws an error when nsamples is called instead of ndraws in brms", {
-  skip_if_not_installed("brms")
-  m_hp = readRDS(test_path("../models/models.brms.m_hp.rds"))
-
-  expect_error(
-    m_hp %>% epred_rvars(mtcars_tbl, nsamples = 10),
-    "`nsamples.*.`ndraws`.*.See the documentation for additional details."
-  )
-  expect_error(
-    mtcars_tbl %>% add_epred_rvars(m_hp, nsamples = 10),
-    "`nsamples.*.`ndraws`.*.See the documentation for additional details."
-  )
-})
-
 
 test_that("[add_]epred_rvars throws an error when re.form is called instead of re_formula in rstanarm", {
   skip_if_not_installed("rstanarm")

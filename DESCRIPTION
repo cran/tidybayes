@@ -1,7 +1,7 @@
 Package: tidybayes
 Title: Tidy Data and 'Geoms' for Bayesian Models
-Version: 3.0.0
-Date: 2021-07-26
+Version: 3.0.1
+Date: 2021-08-21
 Authors@R: c(
         person("Matthew", "Kay", role = c("aut", "cre"), email = "mjskay@northwestern.edu"),
         person("Timothy", "Mastny", role = "ctb", email = "tim.mastny@gmail.com")
@@ -22,7 +22,7 @@ Suggests: knitr, testthat, purrr (>= 0.2.3), forcats, vdiffr (>=
         1.0.0), svglite, rstan (>= 2.17.0), rstantools (>= 2.1.0),
         runjags, rjags, jagsUI, rstanarm (>= 2.19.2), emmeans, broom
         (>= 0.4.3), dotwhisker, MCMCglmm, bayesplot, modelr, brms (>=
-        2.15.0), cowplot, covr, gdtools, rmarkdown, ggrepel, bindrcpp,
+        2.16.0), cowplot, covr, gdtools, rmarkdown, ggrepel, bindrcpp,
         RColorBrewer, gganimate, gifski, png, pkgdown, distributional,
         transformr
 License: GPL (>= 3)
@@ -57,8 +57,8 @@ Collate: "ggdist-curve_interval.R" "ggdist-cut_cdf_qi.R"
         "tidybayes-models.R" "ungather_draws.R" "unspread_draws.R"
         "util.R" "x_at_y.R" "deprecated.R"
 NeedsCompilation: no
-Packaged: 2021-07-26 18:36:16 UTC; matth
+Packaged: 2021-08-21 21:55:13 UTC; matth
 Author: Matthew Kay [aut, cre],
   Timothy Mastny [ctb]
 Repository: CRAN
-Date/Publication: 2021-07-26 19:30:02 UTC
+Date/Publication: 2021-08-22 08:40:02 UTC
