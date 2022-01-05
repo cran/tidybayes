@@ -302,6 +302,8 @@ test_that("[add_]epred_draws works on brms models with ordinal outcomes (respons
 
 test_that("[add_]epred_draws works on brms models with dirichlet outcomes (response scale)", {
   skip_if_not_installed("brms")
+  skip_if_not(getRversion() >= "4")
+
   m_dirich = readRDS(test_path("../models/models.brms.m_dirich.rds"))
 
   grid = tibble(x = c("A", "B"))
@@ -367,4 +369,12 @@ test_that("[add_]predicted_draws throws an error when re.form is called instead 
     m_hp_wt %>% add_epred_draws(newdata = mtcars_tbl, re.form = NULL),
     "`re.form.*.`re_formula`.*.See the documentation for additional details."
   )
+})
+
+
+# unknown model type tests ------------------------------------------------
+
+test_that("rethinking model usage refers user to tidybayes.rethinking", {
+  m = structure(list(), class = "map2stan")
+  expect_error(epred_draws(m), "tidybayes.rethinking")
 })

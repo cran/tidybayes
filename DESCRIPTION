@@ -1,7 +1,7 @@
 Package: tidybayes
 Title: Tidy Data and 'Geoms' for Bayesian Models
-Version: 3.0.1
-Date: 2021-08-21
+Version: 3.0.2
+Date: 2022-01-03
 Authors@R: c(
         person("Matthew", "Kay", role = c("aut", "cre"), email = "mjskay@northwestern.edu"),
         person("Timothy", "Mastny", role = "ctb", email = "tim.mastny@gmail.com")
@@ -31,7 +31,7 @@ BugReports: https://github.com/mjskay/tidybayes/issues/new
 URL: https://mjskay.github.io/tidybayes/,
         https://github.com/mjskay/tidybayes/
 VignetteBuilder: knitr
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Encoding: UTF-8
 Collate: "ggdist-curve_interval.R" "ggdist-cut_cdf_qi.R"
         "ggdist-geom_slabinterval.R" "ggdist-geom_dotsinterval.R"
@@ -57,8 +57,8 @@ Collate: "ggdist-curve_interval.R" "ggdist-cut_cdf_qi.R"
         "tidybayes-models.R" "ungather_draws.R" "unspread_draws.R"
         "util.R" "x_at_y.R" "deprecated.R"
 NeedsCompilation: no
-Packaged: 2021-08-21 21:55:13 UTC; matth
+Packaged: 2022-01-05 05:29:15 UTC; matth
 Author: Matthew Kay [aut, cre],
   Timothy Mastny [ctb]
 Repository: CRAN
-Date/Publication: 2021-08-22 08:40:02 UTC
+Date/Publication: 2022-01-05 06:10:02 UTC
