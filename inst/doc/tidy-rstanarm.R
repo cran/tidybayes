@@ -189,7 +189,7 @@ m %>%
 m %>%
   spread_draws(`(Intercept)`, b[,group]) %>%
   mutate(condition_mean = `(Intercept)` + b) %>%
-  ggplot(aes(y = group, x = condition_mean, fill = stat(abs(x) < .8))) +
+  ggplot(aes(y = group, x = condition_mean, fill = after_stat(abs(x) < .8))) +
   stat_halfeye() +
   geom_vline(xintercept = c(-.8, .8), linetype = "dashed") +
   scale_fill_manual(values = c("gray80", "skyblue"))
@@ -311,7 +311,7 @@ thresholds[1,]$threshold
 esoph %>%
   data_grid(agegp) %>%
   add_linpred_draws(m_esoph_rs) %>%
-  inner_join(thresholds, by = ".draw") %>%
+  inner_join(thresholds, by = ".draw", multiple = "all") %>%
   mutate(`P(Y = category)` = map2(threshold, .linpred, function(alpha, beta_x)
       # this part is logit^-1(alpha_j - beta*x) - logit^-1(alpha_j-1 - beta*x)
       plogis(alpha - beta_x) - 
@@ -328,7 +328,7 @@ esoph %>%
 esoph_plot = esoph %>%
   data_grid(agegp) %>%
   add_linpred_draws(m_esoph_rs) %>%
-  inner_join(thresholds, by = ".draw") %>%
+  inner_join(thresholds, by = ".draw", multiple = "all") %>%
   mutate(`P(Y = category)` = map2(threshold, .linpred, function(alpha, beta_x)
       # this part is logit^-1(alpha_j - beta*x) - logit^-1(alpha_j-1 - beta*x)
       plogis(alpha - beta_x) - 

@@ -90,7 +90,7 @@ censored_plot = cens_df %>%
   geom_segment(
     aes(x = y + 0.5, xend = y + 0.5, y = 1.75, yend = 1.5, color = ordered(y)),
     data = data.frame(y = unique(cens_df$y_lower)), show.legend = FALSE,
-    arrow = arrow(type = "closed", length = unit(7, "points")), size = 1
+    arrow = arrow(type = "closed", length = unit(7, "points")), linewidth = 1
   ) +
   ylab(NULL) +
   xlab("interval-censored y") +
@@ -192,7 +192,7 @@ cens_df %>%
   geom_qq() +
   geom_abline()
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----resid_hops_1, fig.width = tiny_height, fig.height = tiny_height, results='hide'----------------------------------
 # NOTE: ordinarily I would use a large number of frames (k), 
 # say 50 or 100, but I am keeping it small for the sake of 
 # keeping these examples small
@@ -215,6 +215,11 @@ p = cens_df %>%
   transition_manual(residual_draw)
 
 animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
+
+## ----echo=FALSE, results='asis'---------------------------------------------------------------------------------------
+# animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround
+anim_save("tidybayes-residuals_resid_hops_1.gif")
+cat("![](tidybayes-residuals_resid_hops_1.gif)\n")
 
 ## ---------------------------------------------------------------------------------------------------------------------
 set.seed(41181)
@@ -247,7 +252,7 @@ censored_plot = cens_df_t %>%
   geom_segment(
     aes(x = y + 0.5, xend = y + 0.5, y = 1.75, yend = 1.5, color = ordered(y)),
     data = data.frame(y = unique(cens_df_t$y_lower)), show.legend = FALSE,
-    arrow = arrow(type = "closed", length = unit(7, "points")), size = 1
+    arrow = arrow(type = "closed", length = unit(7, "points")), linewidth = 1
   ) +
   ylab(NULL) +
   xlab("interval-censored y") +
@@ -369,7 +374,7 @@ make_probability_residuals = function(data, prediction, y, y_upper = NA, n = 1) 
     data = mutate(data, !!.prediction := ordered(!!.prediction, levels = levels(!!.prediction)))
   }
   
-  if (is.na(enquo(y_upper)[[2]])) {
+  if (is.na(get_expr(.y_upper))) {
     #no y_upper provided, use y as y_upper
     data = summarise(data,
       .p_lower = mean(!!.prediction < !!.y),
@@ -398,7 +403,7 @@ make_probability_residuals = function(data, prediction, y, y_upper = NA, n = 1) 
 set.seed(51919)
 
 bin_df = tibble(
-  y = rbernoulli(100, .7)
+  y = runif(100) > 0.3
 )
 
 ## ----m_bin_brm, cache = TRUE------------------------------------------------------------------------------------------
@@ -418,7 +423,7 @@ bin_df %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----resid_hops_2, fig.width = tiny_height, fig.height = tiny_height, results = "hide"--------------------------------
 # NOTE: ordinarily I would use a large number of frames (k), 
 # say 50 or 100, but I am keeping it small for the sake of 
 # keeping these examples small
@@ -433,4 +438,9 @@ p = bin_df %>%
   transition_manual(.residual_draw)
 
 animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
+
+## ----echo=FALSE, results='asis'---------------------------------------------------------------------------------------
+# animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround
+anim_save("tidybayes-residuals_resid_hops_2.gif")
+cat("![](tidybayes-residuals_resid_hops_2.gif)\n")
 

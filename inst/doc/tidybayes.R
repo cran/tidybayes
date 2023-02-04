@@ -43,7 +43,6 @@ library(rstan)
 library(rstanarm)
 library(brms)
 library(bayesplot)
-library(MCMCglmm)
 library(RColorBrewer)
 
 theme_set(theme_tidybayes() + panel_border())
@@ -153,7 +152,7 @@ m %>%
 ## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 m %>%
   spread_draws(condition_mean[condition]) %>%
-  ggplot(aes(y = fct_rev(condition), x = condition_mean, fill = stat(abs(x) < .8))) +
+  ggplot(aes(y = fct_rev(condition), x = condition_mean, fill = after_stat(abs(x) < .8))) +
   stat_halfeye() +
   geom_vline(xintercept = c(-.8, .8), linetype = "dashed") +
   scale_fill_manual(values = c("gray80", "skyblue"))
@@ -172,7 +171,7 @@ m %>%
     # size = -.width means smaller probability interval => thicker line
     # this can be omitted, geom_pointinterval includes it automatically
     # if a .width column is in the input data.
-    size = -.width
+    linewidth = -.width
   )) +  
   geom_pointinterval()
 

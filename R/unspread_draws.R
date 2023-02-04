@@ -57,7 +57,7 @@ globalVariables(c("..dimension_values"))
 #'
 #' @importFrom rlang enquos
 #' @importFrom dplyr inner_join ungroup select distinct mutate
-#' @importFrom tidyr spread_ unite
+#' @importFrom tidyr spread unite
 #' @importFrom magrittr %<>% %>%
 #' @rdname unspread_draws
 #' @export
@@ -66,7 +66,7 @@ unspread_draws = function(data, ..., draw_indices = c(".chain", ".iteration", ".
     lapply(enquos(...), function(variable_spec) {
       unspread_draws_(data, variable_spec, draw_indices = draw_indices)
     }) %>%
-    reduce_(inner_join, by = draw_indices) %>%
+    reduce_(inner_join, by = draw_indices, multiple = "all") %>%
     as_tibble()
 
   if (drop_indices) {
@@ -110,7 +110,7 @@ unspread_draws_ = function(data, variable_spec, draw_indices = c(".chain", ".ite
       select(!!c(draw_indices, variable_name, "..dimension_values")) %>%
       mutate(..variable = paste0(variable_name, "[", ..dimension_values, "]")) %>%
       select(-..dimension_values) %>%
-      spread_("..variable", variable_name)
+      spread("..variable", !!variable_name)
   }) %>%
-    reduce_(inner_join, by = draw_indices)
+    reduce_(inner_join, by = draw_indices, multiple = "all")
 }

@@ -166,7 +166,8 @@ tidy_draws.mcmc.list = function(model, ...) {
 #' @rdname tidy_draws
 #' @export
 tidy_draws.stanfit = function(model, ...) {
-  draws = tidy_draws(rstan::As.mcmc.list(model), ...)
+  draws = as_tibble(as_draws_df(model))
+  draws = select(draws, all_of(c(".chain", ".iteration", ".draw")), everything())
   draws = add_rstan_sampler_param_draws(draws, model)
 
   attr(draws, "tidybayes_constructors") = attr(model, "tidybayes_constructors")
@@ -229,9 +230,7 @@ tidy_draws.jagsUI = function(model, ...) {
 #' @importFrom dplyr everything
 #' @export
 tidy_draws.brmsfit = function(model, ...) {
-  draws = as_tibble(as_draws_df(model))
-  draws = select(draws, all_of(c(".chain", ".iteration", ".draw")), everything())
-  draws = add_rstan_sampler_param_draws(draws, model$fit)
+  draws = tidy_draws(model$fit)
 
   attr(draws, "tidybayes_constructors") = attr(model, "tidybayes_constructors")
   draws
@@ -286,7 +285,7 @@ tidy_draws.MCMCglmm = function(model, ...) {
   draws = sol_draws %>%
     list() %>%
     c(other_draws) %>%
-    reduce_(inner_join, by = c(".chain", ".iteration", ".draw"))
+    reduce_(inner_join, by = c(".chain", ".iteration", ".draw"), multiple = "all")
 
   attr(draws, "tidybayes_constructors") = attr(model, "tidybayes_constructors")
   draws

@@ -77,6 +77,7 @@ library(ggrepel)
 library(RColorBrewer)
 library(gganimate)
 library(posterior)
+library(distributional)
 
 theme_set(theme_tidybayes() + panel_border())
 ```
@@ -322,7 +323,7 @@ m %>%
   median_qi(condition_mean = b_Intercept + r_condition, .width = c(.95, .8, .5))
 ```
 
-The results are in a tidy format: one row per group and uncertainty interval width (`.width`). This facilitates plotting. For example, assigning `-.width` to the `size` aesthetic will show all intervals, making thicker lines correspond to smaller intervals. The `ggdist::geom_pointinterval()` geom automatically sets the `size` aesthetic appropriately based on the `.width` column in the data to produce plots of points with multiple probability levels:
+The results are in a tidy format: one row per group and uncertainty interval width (`.width`). This facilitates plotting. For example, assigning `-.width` to the `linewidth` aesthetic will show all intervals, making thicker lines correspond to smaller intervals. The `ggdist::geom_pointinterval()` geom automatically sets the `linewidth` aesthetic appropriately based on the `.width` column in the data to produce plots of points with multiple probability levels:
 
 ```{r fig.width = tiny_width, fig.height = tiny_height}
 m %>%
@@ -351,7 +352,7 @@ Or say you want to annotate portions of the densities in color; the `fill` aesth
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   mutate(condition_mean = b_Intercept + r_condition) %>%
-  ggplot(aes(y = condition, x = condition_mean, fill = stat(abs(x) < .8))) +
+  ggplot(aes(y = condition, x = condition_mean, fill = after_stat(abs(x) < .8))) +
   stat_halfeye() +
   geom_vline(xintercept = c(-.8, .8), linetype = "dashed") +
   scale_fill_manual(values = c("gray80", "skyblue"))
@@ -456,7 +457,7 @@ ABC %>%
 
 The above approach to posterior predictions integrates over the parameter uncertainty to give a single posterior predictive distribution. Another approach, often used by John Kruschke in his book [Doing Bayesian Data Analysis](https://sites.google.com/site/doingbayesiandataanalysis/), is to attempt to show both the predictive uncertainty and the parameter uncertainty simultaneously by showing several possible predictive distributions implied by the posterior.
 
-We can do this pretty easily by asking for the distributional parameters for a given prediction implied by the posterior. We'll do it explicitly here by setting `dpar = c("mu", "sigma")` in `add_epred_draws()`. Rather than specifying the parameters explicitly, you can also just set `dpar = TRUE` to get draws from all distributional parameters in a model, and this will work for any response distribution supported by brms. Then, we can select a small number of draws using `sample_draws()` and then use `ggdist::stat_dist_slab()` to visualize each predictive distribution implied by the values of `mu` and `sigma`:
+We can do this pretty easily by asking for the distributional parameters for a given prediction implied by the posterior. We'll do it explicitly here by setting `dpar = c("mu", "sigma")` in `add_epred_draws()`. Rather than specifying the parameters explicitly, you can also just set `dpar = TRUE` to get draws from all distributional parameters in a model, and this will work for any response distribution supported by brms. Then, we can select a small number of draws using `sample_draws()` and then use `ggdist::stat_slab()` to visualize each predictive distribution implied by the values of `mu` and `sigma`:
 
 ```{r fig.width = tiny_width, fig.height = tiny_height}
 ABC %>%
@@ -464,13 +465,11 @@ ABC %>%
   add_epred_draws(m, dpar = c("mu", "sigma")) %>%
   sample_draws(30) %>%
   ggplot(aes(y = condition)) +
-  stat_dist_slab(aes(dist = "norm", arg1 = mu, arg2 = sigma), 
+  stat_slab(aes(xdist = dist_normal(mu, sigma)), 
     slab_color = "gray65", alpha = 1/10, fill = NA
   ) +
   geom_point(aes(x = response), data = ABC, shape = 21, fill = "#9ECAE1", size = 2)
 ```
-
-For a more detailed description of these charts (and some useful variations on them), see [Solomon Kurz's excellent blog post on the topic](https://solomonkurz.netlify.app/post/2018-12-20-make-rotated-gaussians-kruschke-style/).
 
 We could even combine the Kruschke-style plots of predictive distributions with half-eyes showing the posterior means:
 
@@ -479,7 +478,7 @@ ABC %>%
   data_grid(condition) %>%
   add_epred_draws(m, dpar = c("mu", "sigma")) %>%
   ggplot(aes(x = condition)) +
-  stat_dist_slab(aes(dist = "norm", arg1 = mu, arg2 = sigma), 
+  stat_slab(aes(ydist = dist_normal(mu, sigma)), 
     slab_color = "gray65", alpha = 1/10, fill = NA, data = . %>% sample_draws(30), scale = .5
   ) +
   stat_halfeye(aes(y = .epred), side = "bottom", scale = .5) +
@@ -531,7 +530,7 @@ mtcars %>%
 
 Or we can create animated [hypothetical outcome plots (HOPs)](https://mucollective.northwestern.edu/project/hops-trends) of fit lines:
 
-```{r}
+```{r hops_lines, results='hide'}
 set.seed(123456)
 # NOTE: using a small number of draws to keep this example
 # small, but in practice you probably want 50 or 100
@@ -549,6 +548,12 @@ p = mtcars %>%
   shadow_mark(future = TRUE, color = "gray50", alpha = 1/20)
 
 animate(p, nframes = ndraws, fps = 2.5, width = 432, height = 288, res = 96, dev = "png", type = "cairo")
+```
+
+```{r echo=FALSE, results='asis'}
+# animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround
+anim_save("tidy-brms_hops_lines.gif")
+cat("![](tidy-brms_hops_lines.gif)\n")
 ```
 
 Or we could plot posterior predictions (instead of means). For this example
@@ -733,7 +738,7 @@ The above display does not let you see the correlation between `P(cyl|mpg)` for 
 One way to see this correlation might be to employ [hypothetical outcome plots (HOPs)](https://doi.org/10.1371/journal.pone.0142444) just for the fit line, "detaching" it from the ribbon (another alternative would be to use HOPs on top of line ensembles, as demonstrated earlier in this document). By employing animation, you can see how the lines move in tandem or opposition to each other, revealing some patterns in how they are correlated:
 
 
-```{r}
+```{r hops_ordinal_ribbon_lines, results='hide'}
 # NOTE: using a small number of draws to keep this example
 # small, but in practice you probably want 50 or 100
 ndraws = 20
@@ -747,12 +752,18 @@ p = mtcars_clean %>%
   stat_lineribbon(aes(fill = cyl), alpha = 1/5, color = NA, data = . %>% select(-.draw)) +
   # we use sample_draws to subsample at the level of geom_line (rather than for the full dataset
   # as in previous HOPs examples) because we need the full set of draws for stat_lineribbon above
-  geom_line(aes(group = paste(.draw, cyl)), size = 1, data = . %>% sample_draws(ndraws)) +
+  geom_line(aes(group = paste(.draw, cyl)), linewidth = 1, data = . %>% sample_draws(ndraws)) +
   scale_color_brewer(palette = "Dark2") +
   scale_fill_brewer(palette = "Dark2") +
   transition_manual(.draw)
 
 animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 192, res = 96, dev = "png", type = "cairo")
+```
+
+```{r echo=FALSE, results='asis'}
+# animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround
+anim_save("tidy-brms_hops_ordinal_ribbon_lines.gif")
+cat("![](tidy-brms_hops_ordinal_ribbon_lines.gif)\n")
 ```
 
 Notice how the lines move together, and how they move up or down together or in opposition. We could take a slice through these lines at an x position in the above chart (say, `mpg = 20`) and look at the correlation between them using a scatterplot matrix:
@@ -842,7 +853,7 @@ mtcars_clean %>%
   # recover original factor labels
   mutate(cyl = levels(mtcars_clean$cyl)[.prediction]) %>%
   ggplot(aes(x = cyl)) +
-  stat_count(aes(group = NA), geom = "line", data = mtcars_clean, color = "red", size = 3, alpha = .5) +
+  stat_count(aes(group = NA), geom = "line", data = mtcars_clean, color = "red", linewidth = 3, alpha = .5) +
   stat_count(aes(group = .draw), geom = "line", position = "identity", alpha = .05) +
   geom_label(data = data.frame(cyl = "4"), y = 9.5, label = "posterior\npredictions",
     hjust = 1, color = "gray50", lineheight = 1, label.size = NA) +
@@ -865,7 +876,7 @@ mtcars_clean %>%
   # because brms no longer returns labelled predictions (hopefully that
   # is fixed then this will no longer be necessary)
   ungroup() %>%
-  mutate(cyl = factor(levels(mtcars_clean$cyl)[.prediction])) %>%
+  mutate(cyl = ordered(levels(mtcars_clean$cyl)[.prediction], levels(mtcars_clean$cyl))) %>%
   # need .drop = FALSE to ensure 0 counts are not dropped
   group_by(.draw, .drop = FALSE) %>%
   count(cyl) %>%

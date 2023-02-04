@@ -164,8 +164,8 @@ m %>%
 m %>%
   spread_rvars(b_Intercept, r_condition[condition,]) %>%
   mutate(condition_mean = b_Intercept + r_condition) %>%
-  ggplot(aes(y = condition, dist = condition_mean)) +
-  stat_dist_pointinterval()
+  ggplot(aes(y = condition, xdist = condition_mean)) +
+  stat_pointinterval()
 
 ## -------------------------------------------------------------------------------------------------
 m %>%
@@ -176,15 +176,15 @@ m %>%
 m %>%
   spread_rvars(b_Intercept, r_condition[condition,]) %>%
   mutate(condition_mean = b_Intercept + r_condition) %>%
-  ggplot(aes(y = condition, dist = condition_mean)) +
-  stat_dist_halfeye()
+  ggplot(aes(y = condition, xdist = condition_mean)) +
+  stat_halfeye()
 
 ## ----fig.width = tiny_width, fig.height = tiny_height---------------------------------------------
 m %>%
   spread_rvars(b_Intercept, r_condition[condition,]) %>%
   mutate(condition_mean = b_Intercept + r_condition) %>%
-  ggplot(aes(y = condition, dist = condition_mean, fill = stat(abs(x) < .8))) +
-  stat_dist_halfeye() +
+  ggplot(aes(y = condition, xdist = condition_mean, fill = after_stat(abs(x) < .8))) +
+  stat_halfeye() +
   geom_vline(xintercept = c(-.8, .8), linetype = "dashed") +
   scale_fill_manual(values = c("gray80", "skyblue"))
 
@@ -197,15 +197,15 @@ ABC %>%
 ABC %>%
   data_grid(condition) %>%
   add_epred_rvars(m) %>%
-  ggplot(aes(dist = .epred, y = condition)) +
-  stat_dist_dotsinterval(quantiles = 100)
+  ggplot(aes(xdist = .epred, y = condition)) +
+  stat_dotsinterval(quantiles = 100)
 
 ## ----fig.width = tiny_width, fig.height = tiny_height---------------------------------------------
 ABC %>%
   data_grid(condition) %>%
   add_predicted_rvars(m) %>%
   ggplot(aes(y = condition)) +
-  stat_dist_interval(aes(dist = .prediction), .width = c(.50, .80, .95, .99)) +
+  stat_interval(aes(xdist = .prediction), .width = c(.50, .80, .95, .99)) +
   geom_point(aes(x = response), data = ABC) +
   scale_color_brewer()
 
@@ -215,8 +215,8 @@ ABC %>%
   add_epred_rvars(m) %>%
   add_predicted_rvars(m) %>%
   ggplot(aes(y = condition)) +
-  stat_dist_interval(aes(dist = .prediction)) +
-  stat_dist_pointinterval(aes(dist = .epred), position = position_nudge(y = -0.3)) +
+  stat_interval(aes(xdist = .prediction)) +
+  stat_pointinterval(aes(xdist = .epred), position = position_nudge(y = -0.3)) +
   geom_point(aes(x = response), data = ABC) +
   scale_color_brewer()
 
@@ -232,8 +232,8 @@ ABC %>%
   unnest_rvars() %>%
   sample_draws(30) %>%
   ggplot(aes(y = condition)) +
-  stat_dist_slab(
-    aes(dist = dist_normal(mu, sigma)), 
+  stat_slab(
+    aes(xdist = dist_normal(mu, sigma)), 
     color = "gray65", alpha = 1/10, fill = NA
   ) +
   geom_point(aes(x = response), data = ABC, shape = 21, fill = "#9ECAE1", size = 2)
@@ -252,7 +252,7 @@ mtcars %>%
   data_grid(hp = seq_range(hp, n = 51)) %>%
   add_epred_rvars(m_mpg) %>%
   ggplot(aes(x = hp, color = ordered(cyl))) +
-  stat_dist_lineribbon(aes(dist = .epred)) +
+  stat_lineribbon(aes(ydist = .epred)) +
   geom_point(aes(y = mpg), data = mtcars) +
   scale_fill_brewer(palette = "Greys") +
   scale_color_brewer(palette = "Set2")
@@ -263,7 +263,7 @@ mtcars %>%
   data_grid(hp = seq_range(hp, n = 101)) %>%
   add_predicted_rvars(m_mpg) %>%
   ggplot(aes(x = hp, color = ordered(cyl), fill = ordered(cyl))) +
-  stat_dist_lineribbon(aes(dist = .prediction), .width = c(.95, .80, .50), alpha = 1/4) +
+  stat_lineribbon(aes(ydist = .prediction), .width = c(.95, .80, .50), alpha = 1/4) +
   geom_point(aes(y = mpg), data = mtcars) +
   scale_fill_brewer(palette = "Set2") +
   scale_color_brewer(palette = "Dark2")
@@ -296,8 +296,8 @@ AB %>%
   add_epred_rvars(m_ab) %>%
   add_predicted_rvars(m_ab) %>%
   ggplot(aes(y = group)) +
-  stat_dist_halfeye(aes(dist = .epred), scale = 0.6, position = position_nudge(y = 0.175)) +
-  stat_dist_interval(aes(dist = .prediction)) +
+  stat_halfeye(aes(xdist = .epred), scale = 0.6, position = position_nudge(y = 0.175)) +
+  stat_interval(aes(xdist = .prediction)) +
   geom_point(aes(x = response), data = AB) +
   scale_color_brewer()
 
@@ -305,8 +305,8 @@ AB %>%
 AB %>%
   data_grid(group) %>%
   add_epred_rvars(m_ab, dpar = TRUE) %>%
-  ggplot(aes(dist = sigma, y = group)) +
-  stat_dist_halfeye() +
+  ggplot(aes(xdist = sigma, y = group)) +
+  stat_halfeye() +
   geom_vline(xintercept = 0, linetype = "dashed")
 
 ## ----fig.width = tiny_width, fig.height = tiny_height---------------------------------------------
@@ -315,8 +315,8 @@ m %>%
   compare_levels(r_condition, by = condition) %>%
   ungroup() %>%
   mutate(condition = reorder(condition, r_condition)) %>%
-  ggplot(aes(y = condition, dist = r_condition)) +
-  stat_dist_halfeye() +
+  ggplot(aes(y = condition, xdist = r_condition)) +
+  stat_halfeye() +
   geom_vline(xintercept = 0, linetype = "dashed") 
 
 ## -------------------------------------------------------------------------------------------------
@@ -353,7 +353,7 @@ fit_plot = mtcars_clean %>%
   data_grid(mpg = seq_range(mpg, n = 101)) %>%
   add_epred_rvars(m_cyl, value = "P(cyl | mpg)", columns_to = "cyl") %>%
   ggplot(aes(x = mpg, color = cyl)) +
-  stat_dist_lineribbon(aes(dist = `P(cyl | mpg)`, fill = cyl), alpha = 1/5) +
+  stat_lineribbon(aes(ydist = `P(cyl | mpg)`, fill = cyl), alpha = 1/5) +
   scale_color_brewer(palette = "Dark2") +
   scale_fill_brewer(palette = "Dark2") +
   labs(y = "P(cyl | mpg)")
@@ -381,7 +381,7 @@ data_plot_with_mean = mtcars_clean %>%
   # DOT NOT do this if you are making other chart types like intervals or densities
   add_epred_rvars(m_cyl, value = "P(cyl | mpg)", ndraws = 100) %>%
   # calculate expected cylinder value
-  mutate(cyl = `P(cyl | mpg)` %**% c(4,6,8)) %>%
+  mutate(cyl = drop(`P(cyl | mpg)` %**% c(4,6,8))) %>%
   # transform in long-data-frame-of-draws format for making spaghetti plots
   unnest_rvars() %>%
   ggplot(aes(x = mpg, y = cyl)) +
@@ -423,22 +423,22 @@ x_intercept_lines = geom_vline(
   xintercept = median(x_intercept),
   color = "gray50",
   alpha = 0.2,
-  size = 1
+  linewidth = 1
 )
 
 thresholds_plot = mtcars_clean %>%
   data_grid(mpg = seq_range(mpg, n = 101)) %>%
   add_linpred_rvars(m_cyl) %>%
   ggplot(aes(x = mpg)) +
-  stat_dist_lineribbon(
-    aes(dist = beta[2] - beta[1]),
+  stat_lineribbon(
+    aes(ydist = beta[2] - beta[1]),
     color = beta_2_color, fill = beta_2_color, 
     alpha = 1/30, .width = ppoints(30),
-    size = 1, linetype = "21"
+    linewidth = 1, linetype = "21"
   ) +
-  geom_line(aes(y = 0), size = 1, color = beta_1_color, linetype = "21") +
-  stat_dist_lineribbon(
-    aes(dist = .linpred - beta[1]),
+  geom_line(aes(y = 0), linewidth = 1, color = beta_1_color, linetype = "21") +
+  stat_lineribbon(
+    aes(ydist = .linpred - beta[1]),
     fill = "black", color = "black",
     alpha = 1/30, .width = ppoints(30)
   ) +

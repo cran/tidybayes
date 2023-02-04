@@ -161,7 +161,7 @@ censored_plot = cens_df %>%
   geom_segment(
     aes(x = y + 0.5, xend = y + 0.5, y = 1.75, yend = 1.5, color = ordered(y)),
     data = data.frame(y = unique(cens_df$y_lower)), show.legend = FALSE,
-    arrow = arrow(type = "closed", length = unit(7, "points")), size = 1
+    arrow = arrow(type = "closed", length = unit(7, "points")), linewidth = 1
   ) +
   ylab(NULL) +
   xlab("interval-censored y") +
@@ -359,7 +359,7 @@ cens_df %>%
 
 Looks decent. However, our residuals are now subject to noise---we actually have a distribution of possible QQ plots. So, let's check on some of them to make sure this nice-looking one is not just a fluke. We'll employ [HOPs](https://mucollective.co/project/hops-trends) to do that:
 
-```{r, fig.width = tiny_height, fig.height = tiny_height}
+```{r resid_hops_1, fig.width = tiny_height, fig.height = tiny_height, results='hide'}
 # NOTE: ordinarily I would use a large number of frames (k), 
 # say 50 or 100, but I am keeping it small for the sake of 
 # keeping these examples small
@@ -382,6 +382,12 @@ p = cens_df %>%
   transition_manual(residual_draw)
 
 animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
+```
+
+```{r echo=FALSE, results='asis'}
+# animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround
+anim_save("tidybayes-residuals_resid_hops_1.gif")
+cat("![](tidybayes-residuals_resid_hops_1.gif)\n")
 ```
 
 Looks good.
@@ -424,7 +430,7 @@ censored_plot = cens_df_t %>%
   geom_segment(
     aes(x = y + 0.5, xend = y + 0.5, y = 1.75, yend = 1.5, color = ordered(y)),
     data = data.frame(y = unique(cens_df_t$y_lower)), show.legend = FALSE,
-    arrow = arrow(type = "closed", length = unit(7, "points")), size = 1
+    arrow = arrow(type = "closed", length = unit(7, "points")), linewidth = 1
   ) +
   ylab(NULL) +
   xlab("interval-censored y") +
@@ -627,7 +633,7 @@ make_probability_residuals = function(data, prediction, y, y_upper = NA, n = 1) 
     data = mutate(data, !!.prediction := ordered(!!.prediction, levels = levels(!!.prediction)))
   }
   
-  if (is.na(enquo(y_upper)[[2]])) {
+  if (is.na(get_expr(.y_upper))) {
     #no y_upper provided, use y as y_upper
     data = summarise(data,
       .p_lower = mean(!!.prediction < !!.y),
@@ -661,7 +667,7 @@ Consider a simple dataset with a single binary outcome:
 set.seed(51919)
 
 bin_df = tibble(
-  y = rbernoulli(100, .7)
+  y = runif(100) > 0.3
 )
 ```
 
@@ -690,7 +696,7 @@ bin_df %>%
 
 Randomized quantile residuals help us see that the fit is probably reasonable. In this case (just to switch it up), we'll look at the probability residuals instead, comparing them against a uniform distribution, like so:
 
-```{r, fig.width = tiny_height, fig.height = tiny_height}
+```{r resid_hops_2, fig.width = tiny_height, fig.height = tiny_height, results = "hide"}
 # NOTE: ordinarily I would use a large number of frames (k), 
 # say 50 or 100, but I am keeping it small for the sake of 
 # keeping these examples small
@@ -705,4 +711,10 @@ p = bin_df %>%
   transition_manual(.residual_draw)
 
 animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
+```
+
+```{r echo=FALSE, results='asis'}
+# animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround
+anim_save("tidybayes-residuals_resid_hops_2.gif")
+cat("![](tidybayes-residuals_resid_hops_2.gif)\n")
 ```

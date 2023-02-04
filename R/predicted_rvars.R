@@ -12,27 +12,9 @@
 #' the expectation of the posterior predictive, or the posterior predictive to
 #' the data frame.
 #'
-#' `add_epred_rvars()` adds [`rvar`]s containing draws from the **expectation**
-#' of the posterior predictive distribution to the data.
-#' It corresponds to [rstanarm::posterior_epred()] or [brms::posterior_epred()].
-#'
-#' `add_predicted_rvars()` adds [`rvar`]s containing draws from the
-#' posterior predictive distribution to the data.
-#' It corresponds to [rstanarm::posterior_predict()] or [brms::posterior_predict()].
-#'
-#' `add_linpred_rvars()` adds [`rvar`]s containing draws from the (possibly
-#' transformed) posterior **linear** predictors (or "link-level" predictors) to the data.
-#' It corresponds to [rstanarm::posterior_linpred()] or [brms::posterior_linpred()].
-#'
-#' The corresponding functions without `add_` as a prefix are alternate spellings
-#' with the opposite order of the first two arguments: e.g. `add_predicted_rvars()`
-#' and `predicted_rvars()`. This facilitates use in data
-#' processing pipelines that start either with a data frame or a model.
-#'
-#' Given equal choice between the two, the spellings prefixed with `add_`
-#' are preferred.
-#'
 #' @templateVar pred_type rvars
+#' @templateVar draws [`rvar`]s containing draws
+#' @template details-pred
 #' @template param-pred-newdata
 #' @template param-pred-object
 #' @template param-pred-value
@@ -87,7 +69,7 @@
 #'   data_grid(hp = seq_range(hp, n = 101)) %>%
 #'   add_epred_rvars(m_mpg) %>%
 #'   ggplot(aes(x = hp, color = ordered(cyl), fill = ordered(cyl))) +
-#'   stat_dist_lineribbon(aes(dist = .epred), .width = c(.95, .8, .5), alpha = 1/3) +
+#'   stat_lineribbon(aes(dist = .epred), .width = c(.95, .8, .5), alpha = 1/3) +
 #'   geom_point(aes(y = mpg), data = mtcars) +
 #'   scale_color_brewer(palette = "Dark2") +
 #'   scale_fill_brewer(palette = "Set2")
@@ -98,7 +80,7 @@
 #'   data_grid(hp = seq_range(hp, n = 101)) %>%
 #'   add_predicted_rvars(m_mpg) %>%
 #'   ggplot(aes(x = hp, color = ordered(cyl), fill = ordered(cyl))) +
-#'   stat_dist_lineribbon(aes(dist = .prediction), .width = c(.95, .8, .5), alpha = 1/3) +
+#'   stat_lineribbon(aes(dist = .prediction), .width = c(.95, .8, .5), alpha = 1/3) +
 #'   geom_point(aes(y = mpg), data = mtcars) +
 #'   scale_color_brewer(palette = "Dark2") +
 #'   scale_fill_brewer(palette = "Set2")
@@ -230,16 +212,14 @@ pred_rvars_ = function(
 
   # get the rvars for the primary parameter
   out = if (is_tibble(newdata)) newdata else as_tibble(newdata)
-  out[[output_name]] = withr::with_seed(seed, rvar(.f(
-    object = object, newdata = newdata, ...
-  )))
+  draws = withr::with_seed(seed, .f(object = object, newdata = newdata, ...))
+  out[[output_name]] = rvar(draws)
 
   # get rvars for the dpars
   for (i in seq_along(dpars)) {
     varname = names(dpars)[[i]]
-    out[[varname]] = withr::with_seed(seed, rvar(.f(
-      object = object, newdata = newdata, ..., dpar = dpars[[i]]
-    )))
+    draws = withr::with_seed(seed, .f(object = object, newdata = newdata, ..., dpar = dpars[[i]]))
+    out[[varname]] = rvar(draws)
   }
 
   rvar_pred_columns_to(out, output_name, columns_to)

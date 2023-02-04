@@ -1,7 +1,6 @@
 Package: tidybayes
 Title: Tidy Data and 'Geoms' for Bayesian Models
-Version: 3.0.2
-Date: 2022-01-03
+Version: 3.0.3
 Authors@R: c(
         person("Matthew", "Kay", role = c("aut", "cre"), email = "mjskay@northwestern.edu"),
         person("Timothy", "Mastny", role = "ctb", email = "tim.mastny@gmail.com")
@@ -14,7 +13,7 @@ Description: Compose data for and extract, manipulate, and visualize posterior d
     common visualization primitives like points with multiple uncertainty intervals, eye plots (intervals plus
     densities), and fit curves with multiple, arbitrary uncertainty bands.
 Depends: R (>= 3.5.0)
-Imports: methods, ggdist (>= 3.0.0), dplyr (>= 0.8.0), tidyr (>=
+Imports: methods, ggdist (>= 3.0.0), dplyr (>= 1.1.0), tidyr (>=
         1.0.0), ggplot2 (>= 3.3.5), coda, rlang (>= 0.3.0),
         arrayhelpers, tidyselect, tibble, magrittr, posterior (>=
         1.0.1), withr, vctrs
@@ -22,7 +21,7 @@ Suggests: knitr, testthat, purrr (>= 0.2.3), forcats, vdiffr (>=
         1.0.0), svglite, rstan (>= 2.17.0), rstantools (>= 2.1.0),
         runjags, rjags, jagsUI, rstanarm (>= 2.19.2), emmeans, broom
         (>= 0.4.3), dotwhisker, MCMCglmm, bayesplot, modelr, brms (>=
-        2.16.0), cowplot, covr, gdtools, rmarkdown, ggrepel, bindrcpp,
+        2.16.0), cowplot, covr, rmarkdown, ggrepel, bindrcpp,
         RColorBrewer, gganimate, gifski, png, pkgdown, distributional,
         transformr
 License: GPL (>= 3)
@@ -31,7 +30,7 @@ BugReports: https://github.com/mjskay/tidybayes/issues/new
 URL: https://mjskay.github.io/tidybayes/,
         https://github.com/mjskay/tidybayes/
 VignetteBuilder: knitr
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
 Encoding: UTF-8
 Collate: "ggdist-curve_interval.R" "ggdist-cut_cdf_qi.R"
         "ggdist-geom_slabinterval.R" "ggdist-geom_dotsinterval.R"
@@ -57,8 +56,8 @@ Collate: "ggdist-curve_interval.R" "ggdist-cut_cdf_qi.R"
         "tidybayes-models.R" "ungather_draws.R" "unspread_draws.R"
         "util.R" "x_at_y.R" "deprecated.R"
 NeedsCompilation: no
-Packaged: 2022-01-05 05:29:15 UTC; matth
+Packaged: 2023-02-04 03:36:39 UTC; matth
 Author: Matthew Kay [aut, cre],
   Timothy Mastny [ctb]
 Repository: CRAN
-Date/Publication: 2022-01-05 06:10:02 UTC
+Date/Publication: 2023-02-04 09:10:02 UTC

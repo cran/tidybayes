@@ -45,6 +45,7 @@ library(ggrepel)
 library(RColorBrewer)
 library(gganimate)
 library(posterior)
+library(distributional)
 
 theme_set(theme_tidybayes() + panel_border())
 
@@ -190,7 +191,7 @@ m %>%
 m %>%
   spread_draws(b_Intercept, r_condition[condition,]) %>%
   mutate(condition_mean = b_Intercept + r_condition) %>%
-  ggplot(aes(y = condition, x = condition_mean, fill = stat(abs(x) < .8))) +
+  ggplot(aes(y = condition, x = condition_mean, fill = after_stat(abs(x) < .8))) +
   stat_halfeye() +
   geom_vline(xintercept = c(-.8, .8), linetype = "dashed") +
   scale_fill_manual(values = c("gray80", "skyblue"))
@@ -254,7 +255,7 @@ ABC %>%
   add_epred_draws(m, dpar = c("mu", "sigma")) %>%
   sample_draws(30) %>%
   ggplot(aes(y = condition)) +
-  stat_dist_slab(aes(dist = "norm", arg1 = mu, arg2 = sigma), 
+  stat_slab(aes(xdist = dist_normal(mu, sigma)), 
     slab_color = "gray65", alpha = 1/10, fill = NA
   ) +
   geom_point(aes(x = response), data = ABC, shape = 21, fill = "#9ECAE1", size = 2)
@@ -264,7 +265,7 @@ ABC %>%
   data_grid(condition) %>%
   add_epred_draws(m, dpar = c("mu", "sigma")) %>%
   ggplot(aes(x = condition)) +
-  stat_dist_slab(aes(dist = "norm", arg1 = mu, arg2 = sigma), 
+  stat_slab(aes(ydist = dist_normal(mu, sigma)), 
     slab_color = "gray65", alpha = 1/10, fill = NA, data = . %>% sample_draws(30), scale = .5
   ) +
   stat_halfeye(aes(y = .epred), side = "bottom", scale = .5) +
@@ -302,7 +303,7 @@ mtcars %>%
   geom_point(data = mtcars) +
   scale_color_brewer(palette = "Dark2")
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----hops_lines, results='hide'---------------------------------------------------------------------------------------
 set.seed(123456)
 # NOTE: using a small number of draws to keep this example
 # small, but in practice you probably want 50 or 100
@@ -320,6 +321,11 @@ p = mtcars %>%
   shadow_mark(future = TRUE, color = "gray50", alpha = 1/20)
 
 animate(p, nframes = ndraws, fps = 2.5, width = 432, height = 288, res = 96, dev = "png", type = "cairo")
+
+## ----echo=FALSE, results='asis'---------------------------------------------------------------------------------------
+# animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround
+anim_save("tidy-brms_hops_lines.gif")
+cat("![](tidy-brms_hops_lines.gif)\n")
 
 ## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 mtcars %>%
@@ -439,7 +445,7 @@ plot_grid(ncol = 1, align = "v",
   fit_plot
 )
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----hops_ordinal_ribbon_lines, results='hide'------------------------------------------------------------------------
 # NOTE: using a small number of draws to keep this example
 # small, but in practice you probably want 50 or 100
 ndraws = 20
@@ -453,12 +459,17 @@ p = mtcars_clean %>%
   stat_lineribbon(aes(fill = cyl), alpha = 1/5, color = NA, data = . %>% select(-.draw)) +
   # we use sample_draws to subsample at the level of geom_line (rather than for the full dataset
   # as in previous HOPs examples) because we need the full set of draws for stat_lineribbon above
-  geom_line(aes(group = paste(.draw, cyl)), size = 1, data = . %>% sample_draws(ndraws)) +
+  geom_line(aes(group = paste(.draw, cyl)), linewidth = 1, data = . %>% sample_draws(ndraws)) +
   scale_color_brewer(palette = "Dark2") +
   scale_fill_brewer(palette = "Dark2") +
   transition_manual(.draw)
 
 animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 192, res = 96, dev = "png", type = "cairo")
+
+## ----echo=FALSE, results='asis'---------------------------------------------------------------------------------------
+# animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround
+anim_save("tidy-brms_hops_ordinal_ribbon_lines.gif")
+cat("![](tidy-brms_hops_ordinal_ribbon_lines.gif)\n")
 
 ## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
 tibble(mpg = 20) %>%
@@ -531,7 +542,7 @@ mtcars_clean %>%
   # recover original factor labels
   mutate(cyl = levels(mtcars_clean$cyl)[.prediction]) %>%
   ggplot(aes(x = cyl)) +
-  stat_count(aes(group = NA), geom = "line", data = mtcars_clean, color = "red", size = 3, alpha = .5) +
+  stat_count(aes(group = NA), geom = "line", data = mtcars_clean, color = "red", linewidth = 3, alpha = .5) +
   stat_count(aes(group = .draw), geom = "line", position = "identity", alpha = .05) +
   geom_label(data = data.frame(cyl = "4"), y = 9.5, label = "posterior\npredictions",
     hjust = 1, color = "gray50", lineheight = 1, label.size = NA) +
@@ -549,7 +560,7 @@ mtcars_clean %>%
   # because brms no longer returns labelled predictions (hopefully that
   # is fixed then this will no longer be necessary)
   ungroup() %>%
-  mutate(cyl = factor(levels(mtcars_clean$cyl)[.prediction])) %>%
+  mutate(cyl = ordered(levels(mtcars_clean$cyl)[.prediction], levels(mtcars_clean$cyl))) %>%
   # need .drop = FALSE to ensure 0 counts are not dropped
   group_by(.draw, .drop = FALSE) %>%
   count(cyl) %>%

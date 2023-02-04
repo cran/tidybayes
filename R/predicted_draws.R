@@ -13,30 +13,9 @@
 #' the expectation of the posterior predictive, the posterior predictive, or the residuals of a model to
 #' the data frame in a long format.
 #'
-#' `add_epred_draws()` adds draws from **expectation** of the posterior predictive distribution to
-#' the data.
-#' It corresponds to [rstanarm::posterior_epred()] or [brms::posterior_epred()].
-#'
-#' `add_predicted_draws()` adds draws from posterior predictive distribution to
-#' the data.
-#' It corresponds to [rstanarm::posterior_predict()] or [brms::posterior_predict()].
-#'
-#' `add_linpred_draws()` adds draws from (possibly transformed) posterior **linear**
-#' predictors (or "link-level" predictors) to the data.
-#' It corresponds to [rstanarm::posterior_linpred()] or [brms::posterior_linpred()].
-#'
-#' `add_residual_draws()` adds draws from residuals to the data.
-#' It corresponds to [brms::residuals.brmsfit()].
-#'
-#' The corresponding functions without `add_` as a prefix are alternate spellings
-#' with the opposite order of the first two arguments: e.g. `add_predicted_draws()`
-#' and `predicted_draws()`. This facilitates use in data
-#' processing pipelines that start either with a data frame or a model.
-#'
-#' Given equal choice between the two, the spellings prefixed with `add_`
-#' are preferred.
-#'
 #' @templateVar pred_type draws
+#' @templateVar draws draws
+#' @template details-pred
 #' @template param-pred-newdata
 #' @template param-pred-object
 #' @template param-pred-value
@@ -215,13 +194,27 @@ pred_draws_default_ = function(
   if (!requireNamespace("rstantools", quietly = TRUE)) {
     stop0('Using `", .name, "` requires the `rstantools` package to be installed.') #nocov
   }
-  model_class = class(object)
-  if (isTRUE(model_class %in% c("ulam", "quap", "map", "map2stan"))) {
-    stop0(
-      "Models of type ", deparse0(model_class), " are not supported by basic tidybayes::", .name, ".\n",
-      "Install the `tidybayes.rethinking` package to enable support for these models:\n",
-      "  devtools::install_github('mjskay/tidybayes.rethinking')"
-    )
+  if (inherits(object, c("ulam", "quap", "map", "map2stan"))) {
+    class_name = deparse0(class(object))
+    if (.name == "epred_draws") {
+      stop0(
+        "Models of type ", class_name, " are not supported by tidybayes::epred_draws().\n",
+        "- These models support only [add_]predicted_draws() and [add_]linpred_draws().\n",
+        "  The closest analog to [add_]epred_draws() is [add_]linpred_draws(), but if you\n",
+        "  are using linpred_draws() in place of epred_draws() take care to ensure the\n",
+        "  posterior distribution of the linear predictor (linpred) is equivalent to the\n",
+        "  posterior distribution of the conditional expectation (epred) for your model type.\n",
+        "- Install the `tidybayes.rethinking` package to enable support for linpred_draws()\n",
+        "  and predicted_draws() with these models:\n",
+        "  remotes::install_github('mjskay/tidybayes.rethinking')"
+      )
+    } else {
+      stop0(
+        "Models of type ", class_name, " are not supported by basic tidybayes::", .name, "().\n",
+        "- Install the `tidybayes.rethinking` package to enable support for these models:\n",
+        "  remotes::install_github('mjskay/tidybayes.rethinking')"
+      )
+    }
   }
 
   pred_draws_(
@@ -371,7 +364,7 @@ pred_draws_one_var_ = function(
       .chain = NA_integer_,
       .iteration = NA_integer_
     ) %>%
-    inner_join(fits_preds_df, by = ".row") %>%
+    inner_join(fits_preds_df, by = ".row", multiple = "all") %>%
     select(-!!sym(output_name), !!sym(output_name)) %>%
     group_by_at(groups)
 }

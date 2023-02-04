@@ -84,8 +84,9 @@ test_that("[add_]predicted_rvars works on brms models with dirichlet responses",
 
   set.seed(1234)
   grid = tibble(x = c("A", "B"))
+  draws = rstantools::posterior_predict(m_dirich, grid, ndraws = 10)
   ref = grid %>%
-    mutate(.prediction = rvar(rstantools::posterior_predict(m_dirich, grid, ndraws = 10)))
+    mutate(.prediction = rvar(draws))
 
   expect_equal(predicted_rvars(m_dirich, grid, seed = 1234, ndraws = 10), ref)
 })
@@ -108,7 +109,7 @@ test_that("[add_]predicted_rvars works on brms models with multinomial responses
   column_ref = ref %>%
     mutate(.row = 1:n()) %>%
     group_by(across(-.prediction)) %>%
-    summarise(col_pred = colnames(.prediction), .prediction = t(.prediction), .groups = "drop") %>%
+    reframe(col_pred = colnames(.prediction), .prediction = t(.prediction)) %>%
     arrange(col_pred, .row)
   dim(column_ref$.prediction) = length(column_ref$.prediction)
   attr(draws_of(column_ref$.prediction), "levels") = c("a","b","c")
