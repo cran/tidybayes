@@ -1,6 +1,6 @@
 Package: tidybayes
 Title: Tidy Data and 'Geoms' for Bayesian Models
-Version: 3.0.3
+Version: 3.0.4
 Authors@R: c(
         person("Matthew", "Kay", role = c("aut", "cre"), email = "mjskay@northwestern.edu"),
         person("Timothy", "Mastny", role = "ctb", email = "tim.mastny@gmail.com")
@@ -56,8 +56,8 @@ Collate: "ggdist-curve_interval.R" "ggdist-cut_cdf_qi.R"
         "tidybayes-models.R" "ungather_draws.R" "unspread_draws.R"
         "util.R" "x_at_y.R" "deprecated.R"
 NeedsCompilation: no
-Packaged: 2023-02-04 03:36:39 UTC; matth
+Packaged: 2023-03-14 03:42:05 UTC; matth
 Author: Matthew Kay [aut, cre],
   Timothy Mastny [ctb]
 Repository: CRAN
-Date/Publication: 2023-02-04 09:10:02 UTC
+Date/Publication: 2023-03-14 04:30:02 UTC

@@ -12,7 +12,7 @@
 
 <meta name="author" content="Matthew Kay" />
 
-<meta name="date" content="2023-02-03" />
+<meta name="date" content="2023-03-13" />
 
 <title>Extracting and visualizing tidy draws from brms models</title>
 
@@ -341,7 +341,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Extracting and visualizing tidy draws from
 brms models</h1>
 <h4 class="author">Matthew Kay</h4>
-<h4 class="date">2023-02-03</h4>
+<h4 class="date">2023-03-13</h4>
 
 
 <div id="TOC">
@@ -1344,19 +1344,19 @@ use to quickly get convergence diagnostics:</p>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">spread_draws</span>(r_condition[condition,]) <span class="sc">%&gt;%</span></span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise_draws</span>()</span></code></pre></div>
 <div class="kable-table">
-<table style="width:100%;">
+<table>
 <colgroup>
-<col width="11%" />
-<col width="14%" />
 <col width="8%" />
+<col width="10%" />
+<col width="9%" />
+<col width="9%" />
+<col width="8%" />
+<col width="8%" />
+<col width="9%" />
+<col width="9%" />
+<col width="7%" />
 <col width="8%" />
 <col width="7%" />
-<col width="7%" />
-<col width="8%" />
-<col width="8%" />
-<col width="5%" />
-<col width="10%" />
-<col width="10%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -1377,67 +1377,67 @@ use to quickly get convergence diagnostics:</p>
 <tr class="odd">
 <td align="left">A</td>
 <td align="left">r_condition</td>
-<td align="right">-0.312</td>
-<td align="right">-0.336</td>
-<td align="right">0.498</td>
-<td align="right">0.480</td>
-<td align="right">-1.08</td>
-<td align="right">0.526</td>
-<td align="right">1.00</td>
-<td align="right">972.</td>
-<td align="right">1267.</td>
+<td align="right">-0.3121398</td>
+<td align="right">-0.3363530</td>
+<td align="right">0.4978955</td>
+<td align="right">0.4799092</td>
+<td align="right">-1.0782228</td>
+<td align="right">0.5256269</td>
+<td align="right">1.002543</td>
+<td align="right">971.7765</td>
+<td align="right">1267.447</td>
 </tr>
 <tr class="even">
 <td align="left">B</td>
 <td align="left">r_condition</td>
-<td align="right">0.493</td>
-<td align="right">0.480</td>
-<td align="right">0.500</td>
-<td align="right">0.474</td>
-<td align="right">-0.301</td>
-<td align="right">1.34</td>
-<td align="right">1.00</td>
-<td align="right">983.</td>
-<td align="right">1326.</td>
+<td align="right">0.4928093</td>
+<td align="right">0.4798242</td>
+<td align="right">0.4999156</td>
+<td align="right">0.4744824</td>
+<td align="right">-0.3005635</td>
+<td align="right">1.3402506</td>
+<td align="right">1.003311</td>
+<td align="right">983.1190</td>
+<td align="right">1325.680</td>
 </tr>
 <tr class="odd">
 <td align="left">C</td>
 <td align="left">r_condition</td>
-<td align="right">1.33</td>
-<td align="right">1.32</td>
-<td align="right">0.501</td>
-<td align="right">0.478</td>
-<td align="right">0.557</td>
-<td align="right">2.19</td>
-<td align="right">1.00</td>
-<td align="right">994.</td>
-<td align="right">1489.</td>
+<td align="right">1.3327741</td>
+<td align="right">1.3179042</td>
+<td align="right">0.5009147</td>
+<td align="right">0.4778770</td>
+<td align="right">0.5567025</td>
+<td align="right">2.1884327</td>
+<td align="right">1.003105</td>
+<td align="right">993.5292</td>
+<td align="right">1489.303</td>
 </tr>
 <tr class="even">
 <td align="left">D</td>
 <td align="left">r_condition</td>
-<td align="right">0.512</td>
-<td align="right">0.498</td>
-<td align="right">0.502</td>
-<td align="right">0.477</td>
-<td align="right">-0.277</td>
-<td align="right">1.36</td>
-<td align="right">1.00</td>
-<td align="right">1013.</td>
-<td align="right">1396.</td>
+<td align="right">0.5118006</td>
+<td align="right">0.4981223</td>
+<td align="right">0.5020947</td>
+<td align="right">0.4765011</td>
+<td align="right">-0.2773801</td>
+<td align="right">1.3607620</td>
+<td align="right">1.001995</td>
+<td align="right">1012.8868</td>
+<td align="right">1395.754</td>
 </tr>
 <tr class="odd">
 <td align="left">E</td>
 <td align="left">r_condition</td>
-<td align="right">-1.39</td>
-<td align="right">-1.40</td>
-<td align="right">0.500</td>
-<td align="right">0.468</td>
-<td align="right">-2.17</td>
-<td align="right">-0.535</td>
-<td align="right">1.00</td>
-<td align="right">990.</td>
-<td align="right">1392.</td>
+<td align="right">-1.3883041</td>
+<td align="right">-1.3978927</td>
+<td align="right">0.4995347</td>
+<td align="right">0.4680347</td>
+<td align="right">-2.1723234</td>
+<td align="right">-0.5349330</td>
+<td align="right">1.002854</td>
+<td align="right">989.8028</td>
+<td align="right">1391.940</td>
 </tr>
 </tbody>
 </table>
