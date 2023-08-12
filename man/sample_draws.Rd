@@ -27,8 +27,7 @@ select a different sample within each group. \code{sample_draws()} ensures the s
 each group.
 }
 \examples{
-\dontshow{if (requireNamespace("brms", quietly = TRUE) && requireNamespace("modelr", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-\donttest{
+\dontrun{
 
 library(ggplot2)
 library(dplyr)
@@ -55,7 +54,6 @@ mtcars \%>\%
   geom_point(data = mtcars)
 
 }
-\dontshow{\}) # examplesIf}
 }
 \author{
 Matthew Kay

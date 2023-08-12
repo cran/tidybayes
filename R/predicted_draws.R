@@ -55,8 +55,8 @@
 #' @seealso [add_draws()] for the variant of these functions for use with packages that do not have
 #' explicit support for these functions yet. See [spread_draws()] for manipulating posteriors directly.
 #' @keywords manip
-#' @examplesIf requireNamespace("brms", quietly = TRUE) && requireNamespace("modelr", quietly = TRUE)
-#' \donttest{
+#' @examples
+#' \dontrun{
 #'
 #' library(ggplot2)
 #' library(dplyr)

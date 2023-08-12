@@ -36,8 +36,7 @@ model types (like handling ordinal responses and distributional parameters in br
 that \code{add_predicted_draws} standardizes argument names and values across packages.
 }
 \examples{
-\dontshow{if (requireNamespace("brms", quietly = TRUE) && requireNamespace("modelr", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-\donttest{
+\dontrun{
 
 library(ggplot2)
 library(dplyr)
@@ -64,7 +63,6 @@ mtcars \%>\%
   scale_fill_brewer(palette = "Greys")
 
 }
-\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=add_predicted_draws]{add_predicted_draws()}}, \code{\link[=add_draws]{add_draws()}}

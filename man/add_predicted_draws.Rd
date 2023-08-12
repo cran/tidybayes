@@ -388,8 +388,7 @@ Given equal choice between the two, the spellings prefixed with \code{add_}
 are preferred.
 }
 \examples{
-\dontshow{if (requireNamespace("brms", quietly = TRUE) && requireNamespace("modelr", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-\donttest{
+\dontrun{
 
 library(ggplot2)
 library(dplyr)
@@ -425,7 +424,6 @@ mtcars \%>\%
   scale_fill_brewer(palette = "Greys")
 
 }
-\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=add_draws]{add_draws()}} for the variant of these functions for use with packages that do not have

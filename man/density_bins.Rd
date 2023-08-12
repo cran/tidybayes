@@ -45,8 +45,7 @@ the now-deprecated \code{\link[=predict_curve]{predict_curve()}}.
 \code{histogram_bins} computes a density histogram using \code{\link[=hist]{hist()}}.
 }
 \examples{
-\dontshow{if (requireNamespace("brms", quietly = TRUE) && requireNamespace("modelr", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-\donttest{
+\dontrun{
 
 library(ggplot2)
 library(dplyr)
@@ -73,7 +72,6 @@ mtcars \%>\%
   scale_fill_brewer(palette = "Set2")
 
 }
-\dontshow{\}) # examplesIf}
 }
 \seealso{
 See \code{\link[=add_predicted_draws]{add_predicted_draws()}} and \code{\link[=stat_lineribbon]{stat_lineribbon()}} for a better approach. These

@@ -317,8 +317,7 @@ Given equal choice between the two, the spellings prefixed with \code{add_}
 are preferred.
 }
 \examples{
-\dontshow{if (requireNamespace("brms", quietly = TRUE) && requireNamespace("modelr", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-\donttest{
+\dontrun{
 
 library(ggplot2)
 library(dplyr)
@@ -366,7 +365,6 @@ mtcars \%>\%
   scale_fill_brewer(palette = "Set2")
 
 }
-\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=add_predicted_draws]{add_predicted_draws()}} for the analogous functions that use a long-data-frame-of-draws

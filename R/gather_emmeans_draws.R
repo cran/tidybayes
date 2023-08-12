@@ -38,8 +38,8 @@
 #' @author Matthew Kay
 #' @seealso [emmeans::emmeans()]
 #' @keywords manip
-#' @examplesIf requireNamespace("brms", quietly = TRUE) && requireNamespace("emmeans", quietly = TRUE)
-#' \donttest{
+#' @examples
+#' \dontrun{
 #'
 #' library(dplyr)
 #' library(magrittr)

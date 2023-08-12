@@ -1,18 +1,22 @@
 as_constructor = function(x) UseMethod("as_constructor")
 
+#' @export
 as_constructor.default = function(x) identity
 
+#' @export
 as_constructor.factor = function(x) {
   x_levels = levels(x)
   x_is_ordered = is.ordered(x)
   function(x) factor(x, levels = seq_along(x_levels), labels = x_levels, ordered = x_is_ordered)
 }
 
+#' @export
 as_constructor.character = function(x) {
   x_levels = levels(as.factor(x))
   function(x) x_levels[x]
 }
 
+#' @export
 as_constructor.logical = function(x) as.logical
 
 
@@ -65,8 +69,8 @@ apply_prototypes = function(...) {
 #' @aliases apply_prototypes
 #' @seealso [spread_draws()], [gather_draws()], [compose_data()].
 #' @keywords manip
-#' @examplesIf requireNamespace("rstan", quietly = TRUE)
-#' \donttest{
+#' @examples
+#' \dontrun{
 #'
 #' library(dplyr)
 #' library(magrittr)
@@ -77,7 +81,7 @@ apply_prototypes = function(...) {
 #' n = 10
 #' n_condition = 5
 #' ABC = tibble(
-#'   condition = rep(c("A","B","C","D","E"), n),
+#'   condition = factor(rep(c("A","B","C","D","E"), n)),
 #'   response = rnorm(n * 5, c(0,1,2,1,-1), 0.5)
 #' )
 #'
@@ -141,12 +145,37 @@ recover_types = function(model, ...) {
     attr(model, "tidybayes_constructors") = list()
   }
 
+  character_variables = character()
   for (prototypes in list(...)) {
+    if (!is.list(prototypes)) {
+      cli::cli_abort(c(
+        "All arguments to {.help recover_types} (except the model) must be lists or data frames.",
+        ">" = "Did you mean to do something like {.code recover_types(model, list(...))}?"
+      ))
+    }
+
     #we iterate this way instead of building a list directly
     #so that existing names are overwritten
     for (variable_name in names(prototypes)) {
-      attr(model, "tidybayes_constructors")[[variable_name]] = as_constructor(prototypes[[variable_name]])
+      variable = prototypes[[variable_name]]
+      if (is.character(variable)) {
+        character_variables = c(character_variables, variable_name)
+      }
+      attr(model, "tidybayes_constructors")[[variable_name]] = as_constructor(variable)
     }
+  }
+
+  # deprecation warning for character variables
+  if (length(character_variables) > 0) {
+    cli::cli_warn(c(
+      "It is no longer recommended to use character vectors with {.help recover_types}, as the intended order of the levels of the variable is ambiguous.",
+      "i" = "The following character vectors were provided to {.fun recover_types}: {.var {character_variables}}",
+      ">" = "Instead of using character vectors, convert the variable to a {.fun factor}
+        {.emph before} passing the data into your model, then pass the {.emph same}
+        factor variable to {.fun recover_types} after the model is fit. This will
+        ensure that the level order matches exactly when variable indices are
+        extracted from the model."
+    ))
   }
 
   model
