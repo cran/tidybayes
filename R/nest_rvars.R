@@ -15,17 +15,17 @@
 #'    and `.iteration` columns) indexing draws. It should be a grouped by any
 #'    columns that are not intended to be nested.
 #'  - For `unnest_rvars()`, the data frame should have at least one column that
-#'    is an [`rvar`]; all `rvar` columns will be unnested.
+#'    is an [`rvar`][posterior::rvar]; all `rvar` columns will be unnested.
 #'
 #' @return
 #'
 #' For `nest_rvars()`, returns a data frame without `.chain`, `.iteration`, and
-#' `.draw` columns, where all non-grouped columns have been converted to [`rvar`]s.
+#' `.draw` columns, where all non-grouped columns have been converted to [`rvar`][posterior::rvar]s.
 #'
 #' For `unnest_rvars()`, returns a data frame with `.chain`, `.iteration`, and
-#' `.draw` columns added, where every [`rvar`] column in the input has been
-#' converted to (one or more) columns containing draws from those [`rvar`]s
-#' in long format. The result is grouped by all non-[`rvar`] columns in the
+#' `.draw` columns added, where every [`rvar`][posterior::rvar] column in the input has been
+#' converted to (one or more) columns containing draws from those [`rvar`][posterior::rvar]s
+#' in long format. The result is grouped by all non-[`rvar`][posterior::rvar] columns in the
 #' input; this ensures that `nest_rvars(unnest_rvars(x))` returns `x`.
 #'
 #' @examples
@@ -79,10 +79,7 @@ unnest_rvars = function(data) {
     # convert from draws_df to plain data.frame to avoid
     # warning about meta-data being dropped
     class(draws_df) = "data.frame"
-    # convert from tibble to plain data.frame to fix
-    # incorrect binding in cbind() in R < 4
-    class(constants) = "data.frame"
-    cbind(constants, draws_df)
+    vctrs::vec_cbind(constants, draws_df)
   }))
 
   group_by_at(out, groups_)

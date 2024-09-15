@@ -44,7 +44,7 @@ library(RColorBrewer)
 
 theme_set(theme_tidybayes() + panel_border())
 
-## ---- eval=FALSE----------------------------------------------------------------------------------
+## ----eval=FALSE-----------------------------------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
 #  options(mc.cores = parallel::detectCores())
 

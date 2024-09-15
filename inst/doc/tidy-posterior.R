@@ -45,7 +45,7 @@ library(distributional)
 
 theme_set(theme_tidybayes() + panel_border())
 
-## ---- eval=FALSE------------------------------------------------------------------------------------------------------
+## ----eval=FALSE-------------------------------------------------------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
 #  options(mc.cores = parallel::detectCores())
 
@@ -411,7 +411,7 @@ beta
 x_intercept = with(draws_cyl, b_Intercept / b_mpg)
 x_intercept
 
-## ---- fig.width = med_width, fig.height = med_width-----------------------------------------------
+## ----fig.width = med_width, fig.height = med_width------------------------------------------------
 beta_2_color = brewer.pal(n = 3, name = "Dark2")[[3]]
 beta_1_color = brewer.pal(n = 3, name = "Dark2")[[1]]
 

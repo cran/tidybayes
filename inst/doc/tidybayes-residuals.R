@@ -42,7 +42,7 @@ library(gganimate)
 
 theme_set(theme_tidybayes() + panel_border())
 
-## ---- eval=FALSE------------------------------------------------------------------------------------------------------
+## ----eval=FALSE-------------------------------------------------------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
 #  options(mc.cores = parallel::detectCores())
 
@@ -71,7 +71,7 @@ cens_df =
 ## ---------------------------------------------------------------------------------------------------------------------
 head(cens_df, 10)
 
-## ---- fig.width = large_height/2.8, fig.height = large_height---------------------------------------------------------
+## ----fig.width = large_height/2.8, fig.height = large_height----------------------------------------------------------
 uncensored_plot = cens_df %>%
   ggplot(aes(y = "", x = y_star)) +
   stat_slab() +
@@ -114,13 +114,13 @@ m_ideal = brm(
 ## ---------------------------------------------------------------------------------------------------------------------
 m_ideal
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m_ideal) %>%
   ggplot(aes(x = .row, y = .residual)) +
   stat_pointinterval()
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m_ideal) %>%
   median_qi() %>%
@@ -128,7 +128,7 @@ cens_df %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df %>%
   add_predicted_draws(m_ideal) %>%
   summarise(
@@ -151,13 +151,13 @@ m = brm(
 ## ---------------------------------------------------------------------------------------------------------------------
 m
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m) %>%
   ggplot(aes(x = .row, y = .residual)) +
   stat_pointinterval()
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df %>%
   add_residual_draws(m) %>%
   median_qi(.residual) %>%
@@ -165,7 +165,7 @@ cens_df %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df %>%
   add_predicted_draws(m) %>%
   summarise(
@@ -178,7 +178,7 @@ cens_df %>%
   ggplot(aes(x = .row, y = z_residual)) +
   geom_point()
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df %>%
   add_predicted_draws(m) %>%
   summarise(
@@ -214,7 +214,7 @@ p = cens_df %>%
   geom_abline() +
   transition_manual(residual_draw)
 
-animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
+animate(p, nframes = k, width = 384, height = 384, units = "px", res = 96, dev = "ragg_png")
 
 ## ----echo=FALSE, results='asis'---------------------------------------------------------------------------------------
 # animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround
@@ -233,7 +233,7 @@ cens_df_t =
     censoring = "interval"
   )
 
-## ---- fig.width = tiny_height, fig.height = tiny_width----------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_width-----------------------------------------------------------------
 uncensored_plot = cens_df_t %>%
   ggplot(aes(y = "", x = y)) +
   stat_slab() +
@@ -272,7 +272,7 @@ m_t1 = brm(
   file = "models/tidybayes-residuals_m_t1"  # cache model (can be removed)
 )
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df_t %>%
   add_residual_draws(m_t1) %>%
   median_qi(.residual) %>%
@@ -280,7 +280,7 @@ cens_df_t %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df_t %>%
   add_predicted_draws(m_t1) %>%
   summarise(
@@ -303,7 +303,7 @@ m_t2 = brm(
   file = "models/tidybayes-residuals_m_t2.rds"  # cache model (can be removed)
 )
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df_t %>%
   add_residual_draws(m_t2) %>%
   median_qi(.residual) %>%
@@ -311,7 +311,7 @@ cens_df_t %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df_t %>%
   add_predicted_draws(m_t2) %>%
   summarise(
@@ -340,7 +340,7 @@ m_o = brm(
   file = "models/tidybayes-residuals_m_o.rds"  # cache model (can be removed)
 )
 
-## ---- error = TRUE----------------------------------------------------------------------------------------------------
+## ----error = TRUE-----------------------------------------------------------------------------------------------------
 cens_df_o %>%
   add_residual_draws(m_o) %>%
   median_qi(.residual) %>%
@@ -348,7 +348,7 @@ cens_df_o %>%
   geom_qq() +
   geom_qq_line()
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 cens_df_o %>%
   add_predicted_draws(m_o) %>%
   mutate(.prediction = ordered(levels(y_factor)[.prediction], levels = levels(y_factor))) %>%
@@ -415,7 +415,7 @@ m_bin = brm(
   file = "models/tidybayes-residuals_m_bin.rds"  # cache model (can be removed)
 )
 
-## ---- fig.width = tiny_height, fig.height = tiny_height---------------------------------------------------------------
+## ----fig.width = tiny_height, fig.height = tiny_height----------------------------------------------------------------
 bin_df %>%
   add_residual_draws(m_bin) %>%
   median_qi() %>%
@@ -437,7 +437,7 @@ p = bin_df %>%
   geom_abline() +
   transition_manual(.residual_draw)
 
-animate(p, nframes = k, width = 384, height = 384, res = 96, dev = "png", type = "cairo")
+animate(p, nframes = k, width = 384, height = 384, units = "px", res = 96, dev = "ragg_png")
 
 ## ----echo=FALSE, results='asis'---------------------------------------------------------------------------------------
 # animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround

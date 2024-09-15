@@ -16,10 +16,11 @@ if (requireNamespace("pkgdown", quietly = TRUE) && pkgdown::in_pkgdown()) {
   large_height = 5.25
 }
 
+eval_chunks = if (isTRUE(exists("params"))) params$EVAL else FALSE
 knitr::opts_chunk$set(
   fig.width = small_width,
   fig.height = small_height,
-  eval = if (isTRUE(exists("params"))) params$EVAL else FALSE
+  eval = eval_chunks
 )
 if (capabilities("cairo") && Sys.info()[['sysname']] != "Darwin") {
   knitr::opts_chunk$set(
@@ -37,7 +38,6 @@ library(ggdist)
 library(tidybayes)
 library(ggplot2)
 library(cowplot)
-library(emmeans)
 library(broom)
 library(rstan)
 library(rstanarm)
@@ -47,7 +47,7 @@ library(RColorBrewer)
 
 theme_set(theme_tidybayes() + panel_border())
 
-## ---- eval=FALSE------------------------------------------------------------------------------------------------------
+## ----eval=FALSE-------------------------------------------------------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
 #  options(mc.cores = parallel::detectCores())
 
@@ -307,9 +307,9 @@ mtcars %>%
 ## ---------------------------------------------------------------------------------------------------------------------
 m_linear = lm(response ~ condition, data = ABC)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----eval = eval_chunks && requireNamespace("emmeans", quietly = TRUE)------------------------------------------------
 linear_results = m_linear %>% 
-  emmeans(~ condition) %>% 
+  emmeans::emmeans(~ condition) %>%
   tidy(conf.int = TRUE) %>%
   mutate(model = "OLS")
 
@@ -353,30 +353,30 @@ m %>%
 ## ----results = "hide", message = FALSE--------------------------------------------------------------------------------
 m_rst = stan_glm(response ~ condition, data = ABC)
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----eval = eval_chunks && requireNamespace("emmeans", quietly = TRUE)------------------------------------------------
 m_rst %>%
-  emmeans( ~ condition) %>%
+  emmeans::emmeans( ~ condition) %>%
   gather_emmeans_draws() %>%
   median_qi()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----eval = eval_chunks && requireNamespace("emmeans", quietly = TRUE)------------------------------------------------
 m_rst %>%
-  emmeans( ~ condition) %>%
-  contrast(method = "pairwise") %>%
+  emmeans::emmeans( ~ condition) %>%
+  emmeans::contrast(method = "pairwise") %>%
   gather_emmeans_draws() %>%
   median_qi()
 
-## ----fig.width = tiny_width, fig.height = tiny_height-----------------------------------------------------------------
+## ----fig.width = tiny_width, fig.height = tiny_height, eval = eval_chunks && requireNamespace("emmeans", quietly = TRUE)----
 m_rst %>%
-  emmeans( ~ condition) %>%
-  contrast(method = "pairwise") %>%
+  emmeans::emmeans( ~ condition) %>%
+  emmeans::contrast(method = "pairwise") %>%
   gather_emmeans_draws() %>%
   ggplot(aes(x = .value, y = contrast)) +
   stat_halfeye()
 
-## ---------------------------------------------------------------------------------------------------------------------
+## ----eval = eval_chunks && requireNamespace("emmeans", quietly = TRUE)------------------------------------------------
 m_rst %>%
-  emmeans(pairwise ~ condition) %>%
+  emmeans::emmeans(pairwise ~ condition) %>%
   gather_emmeans_draws() %>%
   median_qi()
 

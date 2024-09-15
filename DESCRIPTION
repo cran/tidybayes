@@ -1,6 +1,6 @@
 Package: tidybayes
 Title: Tidy Data and 'Geoms' for Bayesian Models
-Version: 3.0.6
+Version: 3.0.7
 Authors@R: c(
         person("Matthew", "Kay", role = c("aut", "cre"), email = "mjskay@northwestern.edu"),
         person("Timothy", "Mastny", role = "ctb", email = "tim.mastny@gmail.com")
@@ -12,7 +12,7 @@ Description: Compose data for and extract, manipulate, and visualize posterior d
     summaries and intervals in a tidy format. In addition, 'ggplot2' 'geoms' and 'stats' are provided for
     common visualization primitives like points with multiple uncertainty intervals, eye plots (intervals plus
     densities), and fit curves with multiple, arbitrary uncertainty bands.
-Depends: R (>= 3.5.0)
+Depends: R (>= 4.0.0)
 Imports: methods, ggdist (>= 3.0.0), dplyr (>= 1.1.0), tidyr (>=
         1.0.0), ggplot2 (>= 3.3.5), coda, rlang (>= 0.3.0),
         arrayhelpers, tidyselect, tibble, magrittr, posterior (>=
@@ -20,17 +20,17 @@ Imports: methods, ggdist (>= 3.0.0), dplyr (>= 1.1.0), tidyr (>=
 Suggests: knitr, testthat, purrr (>= 0.2.3), forcats, vdiffr (>=
         1.0.0), svglite, rstan (>= 2.17.0), rstantools (>= 2.1.0),
         runjags, rjags, jagsUI, rstanarm (>= 2.19.2), emmeans, broom
-        (>= 0.4.3), dotwhisker, MCMCglmm, bayesplot, modelr, brms (>=
-        2.16.0), cowplot, covr, rmarkdown, ggrepel, bindrcpp,
-        RColorBrewer, gganimate, gifski, png, pkgdown, distributional,
+        (>= 0.4.3), MCMCglmm, bayesplot, modelr, brms (>= 2.16.0),
+        cowplot, covr, rmarkdown, ggrepel, bindrcpp, RColorBrewer,
+        gganimate, gifski, png, ragg, pkgdown, distributional,
         transformr
 License: GPL (>= 3)
 Language: en-US
-BugReports: https://github.com/mjskay/tidybayes/issues/new
+BugReports: https://github.com/mjskay/tidybayes/issues
 URL: https://mjskay.github.io/tidybayes/,
         https://github.com/mjskay/tidybayes/
 VignetteBuilder: knitr
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 Encoding: UTF-8
 Collate: "ggdist-curve_interval.R" "ggdist-cut_cdf_qi.R"
         "ggdist-geom_slabinterval.R" "ggdist-geom_dotsinterval.R"
@@ -56,8 +56,8 @@ Collate: "ggdist-curve_interval.R" "ggdist-cut_cdf_qi.R"
         "tidybayes-models.R" "ungather_draws.R" "unspread_draws.R"
         "util.R" "x_at_y.R" "deprecated.R"
 NeedsCompilation: no
-Packaged: 2023-08-12 21:10:49 UTC; mjskay
+Packaged: 2024-09-15 05:33:44 UTC; matth
 Author: Matthew Kay [aut, cre],
   Timothy Mastny [ctb]
 Repository: CRAN
-Date/Publication: 2023-08-12 23:30:02 UTC
+Date/Publication: 2024-09-15 06:20:02 UTC

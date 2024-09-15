@@ -49,7 +49,7 @@ library(distributional)
 
 theme_set(theme_tidybayes() + panel_border())
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  rstan_options(auto_write = TRUE)
 #  options(mc.cores = parallel::detectCores())
 
@@ -320,7 +320,7 @@ p = mtcars %>%
   transition_states(.draw, 0, 1) +
   shadow_mark(future = TRUE, color = "gray50", alpha = 1/20)
 
-animate(p, nframes = ndraws, fps = 2.5, width = 432, height = 288, res = 96, dev = "png", type = "cairo")
+animate(p, nframes = ndraws, fps = 2.5, width = 432, height = 288, units = "px", res = 96, dev = "ragg_png")
 
 ## ----echo=FALSE, results='asis'---------------------------------------------------------------------------------------
 # animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround
@@ -464,7 +464,7 @@ p = mtcars_clean %>%
   scale_fill_brewer(palette = "Dark2") +
   transition_manual(.draw)
 
-animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 192, res = 96, dev = "png", type = "cairo")
+animate(p, nframes = ndraws, fps = 2.5, width = 576, height = 192, units = "px", res = 96, dev = "ragg_png")
 
 ## ----echo=FALSE, results='asis'---------------------------------------------------------------------------------------
 # animate() doesn't seem to put the images in the right place for pkgdown, so this is a manual workaround

@@ -1,3 +1,18 @@
+# tidybayes 3.0.7
+
+New features:
+
+* Add support for `draw_indices` parameter in `spread_draws()` and
+  `gather_draws()`. (#323)
+
+
+Bug fixes:
+
+* Support for matrix columns in `nest_rvars()` and `unnest_rvars()`. (#316)
+* Fix some named dimensions being converted to numeric indices in 
+  `spread_draws()` on R >= 4.5.
+
+
 # tidybayes 3.0.6
 
 Deprecations:
